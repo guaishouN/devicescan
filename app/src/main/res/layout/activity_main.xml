@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/MatchMatch.Vertical"
+    android:background="@android:color/white">
+
+    <include layout="@layout/toolbar"/>
+    <TextView
+        android:id="@+id/scan_device_qrcode"
+        style="@style/MatchWrapTv"
+        android:textSize="20sp"
+        android:layout_height="60dp"
+        android:text="扫描二维码"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColorHint="@color/colorPrimaryDark"
+                android:hint="记录ID : " />
+            <TextView
+                android:id="@+id/editTextUId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:hint="多维表格记录ID" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColorHint="@color/colorPrimaryDark"
+                android:hint="设备ID : " />
+            <TextView
+                android:id="@+id/editTextDId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:hint="设备唯一ID" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColorHint="@color/colorPrimaryDark"
+                android:hint="名 称 : " />
+            <TextView
+                android:id="@+id/editTextDev"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:hint="设备名称" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:hint="项 目 : "
+                android:textColorHint="@color/colorPrimaryDark"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/editTextProj"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:hint="所属项目" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:hint="时 间 : "
+                android:textColorHint="@color/colorPrimaryDark"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/editTextTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:hint="修改状态后使用当前时间" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColorHint="@color/colorPrimaryDark"
+                android:hint="使用者 : " />
+            <EditText
+                android:id="@+id/editTextUser"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="设备使用人" />
+        </LinearLayout>
+    </LinearLayout>
+<!--    未分配-->
+<!--    在使用-->
+<!--    已报废-->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_marginBottom="10pt"
+        android:layout_gravity="center"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+        <Button
+            android:id="@+id/device_un"
+            android:onClick="onClick"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:textSize="20sp"
+            android:padding="20dp"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/colorPrimaryDarkTrans"
+            android:textStyle="bold"
+            android:text="未分配"
+            />
+        <Button
+            android:id="@+id/device_in"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:textSize="20sp"
+            android:padding="20dp"
+            android:onClick="onClick"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/colorPrimaryDarkTrans"
+            android:textStyle="bold"
+            android:text="在使用"
+            />
+        <Button
+            android:id="@+id/device_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="已报废"
+            android:padding="20dp"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:onClick="onClick"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/holo_red_light"
+            />
+    </LinearLayout>
+</LinearLayout>

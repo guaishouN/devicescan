@@ -10,6 +10,11 @@ import logging
 import os
 
 default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
+app_id = 'cli_a514aea9fa79900b'
+app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
+app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
+table_id = 'tbl3OBzMMqjX79gN'
+
 
 """如果文件qrcodes目录不存在，则创建"""
 if not os.path.exists('./qrcodes'):
@@ -19,25 +24,33 @@ if not os.path.exists('./qrcodes'):
 # logging.basicConfig(level=logging.DEBUG, filename='./qrcodes/temp_qrlog.log', filemode='a', format='%(asctime)s - %(
 # levelname)s - %(message)s')
 logging.basicConfig(level=logging.DEBUG, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
+configure = configparser.ConfigParser()
 
 
-def deal_with_config():
+def check_config_file():
+    global configure
+    # 解析并读取配置文件feishu-config.ini
+    configure["多维表格地址"] = {'url': default_table_url}
+    # 在config文件中加入注释"单位为cm"
+    desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。"
+    configure["配置说明"] = {"说明": desc}
+    configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
+    configure["标签"] = {'标签行列': (7, 3), '大小': (6.3, 3.8), '标签边距_上下左右': (0, 0, 0, 0.2)}
     # 检查飞书配置文件  feishu-config.ini，如果不存在，则创建
     if not os.path.exists('./feishu-config.ini'):
-        configure = configparser.ConfigParser()
-        configure["多维表格地址"] = {'url': default_table_url}
-        # 在config文件中加入注释"单位为cm" 
-        desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。"
-        configure["配置说明"] = {"说明": desc}
-        configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
-        configure["标签"] = {'标签行列': (7, 3), '大小': (6.3, 3.8), '标签边距_上下左右': (0, 0, 0, 0.2)}
         # utf-8 编码写入配置文件
         with open('./feishu-config.ini', 'w', encoding='utf-8') as cf:
             configure.write(cf)
+    else:
+        configure.read('feishu-config.ini', encoding='utf-8')
+    paper_size = (21.0, 29.7)
+    configure.set("打印纸张", 'page_size', str(paper_size))
+    configure.add_section('SECRET')
+    configure.set('SECRET', 'app_id', app_id)
+    configure.set('SECRET', 'app_secret', app_secret)
+    configure.set('SECRET', 'app_token', app_token)
+    configure.set('SECRET', 'table_id', table_id)
 
-    # 解析并读取配置文件feishu-config.ini
-    configure = configparser.ConfigParser()
-    configure.read('feishu-config.ini', encoding='utf-8')
     # 读取配置文件中的url, 如果没有，则使用默认值
     loc_url = configure.get('多维表格地址', 'url', fallback=None)
     logging.info(f'feishu-config.ini url:{loc_url}')
@@ -51,18 +64,21 @@ def deal_with_config():
         params1 = loc_url.split('?')[1]
         app_token_tmp = url_get1.split('/')[-1]
         table_id_tmp = params1.split('=')[1].split('&')[0]
-        logging.info(f'feishu-config.ini app_token:{app_token_tmp} table_id:{table_id_tmp}')
-        # 将app_token table_id写入配置文件feishu-config.ini
-        # configure.set('多维表格地址', 'app_token', app_token_tmp)
-        # configure.set('多维表格地址', 'table_id', table_id_tmp)
-        # with open('./feishu-config.ini', 'w', encoding='utf-8') as cf:
-        #     configure.write(cf)
+        logging.info(f'feishu-config.ini parser app_token:{app_token_tmp} table_id:{table_id_tmp}')
+        configure.set('SECRET', 'app_token', app_token_tmp)
+        configure.set('SECRET', 'table_id', table_id_tmp)
+    else:
+        return False
+
+    at = configure.get('SECRET', 'app_token')
+    ti = configure.get('SECRET', 'table_id')
+    logging.info(f'feishu-config.ini app_token:{at}, table_id:{ti}')
 
     # 读取配置文件中的说明
     desc = configure.get('配置说明', '说明', fallback=None)
     logging.info(f'feishu-config.ini desc:{desc}')
     # 读取配置文件中的纸张大小, paper_size = configure.get('打印纸张', '宽高', fallback=None)
-    paper_size = (21.0, 29.7)
+    paper_size = configure.get('打印纸张', 'page_size', fallback=None)
     logging.info(f'feishu-config.ini paper_size:{paper_size}')
     # 读取配置文件中的边距
     paper_margin = configure.get('打印纸张', '边距_上下左右', fallback=None)
@@ -76,9 +92,7 @@ def deal_with_config():
     # 读取配置文件中的标签大小
     label_margin = configure.get('标签', '标签边距_上下左右', fallback=None)
     logging.info(f'feishu-config.ini label_margin:{label_margin}')
-
-
-deal_with_config()
+    return True
 
 
 def get_tenant_access_token(app_id=None, app_secret=None, config_file=None):
@@ -102,16 +116,6 @@ def get_tenant_access_token(app_id=None, app_secret=None, config_file=None):
 
 def list_records(tenant_access_token_p=None, app_token_p=None, table_id_p=None, page_token=None, page_size=None,
                  config_file=None):
-    if config_file is None:
-        config_file = 'feishu-config.ini'
-
-    configure = configparser.ConfigParser()
-    configure.read(config_file, encoding='utf-8')
-    if not page_token:
-        page_token = configure.get('LIST_RECORDS', 'page_token', fallback=None)
-    if not page_size:
-        page_size = configure.get('LIST_RECORDS', 'page_size', fallback=100)
-
     url_record = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token_p}/tables/{table_id_p}/records?filter=CurrentValue.%5B%E5%8B%BE%E9%80%89%E6%89%93%E5%8D%B0%E6%A0%87%E7%AD%BE%5D%3D1"
     headers = {
         'Authorization': 'Bearer ' + tenant_access_token_p,
@@ -232,10 +236,10 @@ def insert_images_into_word():
         if i % images_per_page == 1:
             table = document.add_table(rows=rows, cols=cols)
             for row in table.rows:
-                row.height = Cm(1)
+                row.height = Cm(3.7)
             for col in table.columns:
-                col.width = Cm(2)
-            #table.style = 'Table Grid'
+                col.width = Cm(6.3)
+            # table.style = 'Table Grid'
             cell_index = 0
 
         # 获取当前单元格
@@ -249,7 +253,7 @@ def insert_images_into_word():
         # 居中插入图片
         paragraph = cell.paragraphs[0]
         run = paragraph.add_run()
-        run.add_picture(image_path, width=Cm(2), height=Cm(1))
+        run.add_picture(image_path, width=Cm(6.2), height=Cm(3.5))
         run.alignment = 2
         cell_index += 1
 
@@ -278,45 +282,15 @@ def print_log(log_str):
     pass
 
 
-app_id = 'cli_a514aea9fa79900b'
-app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
-
-# 从配置文件feishu-config.ini中读取app_token table_id, 如果配置文件不存在，则使用默认值, 判断配置文件存在
-app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
-table_id = 'tbl3OBzMMqjX79gN'
-if os.path.exists('./feishu-config.ini'):
-    config = configparser.ConfigParser()
-    config.read('feishu-config.ini', encoding='utf-8')
-    url = config.get('多维表格地址', 'url', fallback=None)
-    logging.info(f'feishu-config.ini get url:{url}')
-    if not url:
-        url = default_table_url
-        logging.info(f'feishu-config.ini null then defualt url:{url}')
-    # 如果url符合格式则从url中解析出app_token table_id
-    if url.startswith('https://yesv-desaysv.feishu.cn/base'):
-        url_get = url.split('?')[0]
-        params = url.split('?')[1]
-        app_token = url_get.split('/')[-1]
-        table_id = params.split('=')[1].split('&')[0]
-        logging.info(f'feishu-config.ini parse app_token:{app_token} table_id:{table_id}')
-    if not app_token or not table_id:
-        app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
-        table_id = 'tbl3OBzMMqjX79gN'
-        logging.info(f'feishu-config.ini defualt app_token:{app_token} table_id:{table_id}')
-else:
-    logging.info(f'feishu-config.ini not exist, use default app_token:{app_token} table_id:{table_id}')
-    # 如果配置文件不存在，则创建
-    config = configparser.ConfigParser()
-    config["多维表格地址"] = {'url': default_table_url}
-    # 保存配置文件
-    with open('./feishu-config.ini', 'w', encoding='utf-8') as configfile:
-        config.write(configfile)
-
-
+check_config_file()
 code1, msg1, tenant_access_token = get_tenant_access_token(app_id=app_id, app_secret=app_secret)
 logging.info(f'code1:{code1} tenant_access_token:{tenant_access_token}')
+
+app_token_cf = configure.get('SECRET', 'app_token')
+table_id_cf = configure.get('SECRET', 'table_id')
 if code1 == 0:
-    code2, msg2, items = list_records(tenant_access_token_p=tenant_access_token, app_token_p=app_token, table_id_p=table_id)
+    code2, msg2, items = list_records(tenant_access_token_p=tenant_access_token, app_token_p=app_token_cf,
+                                      table_id_p=table_id_cf)
     logging.info(f'code2:{code2} records sizes:{len(items)}')
     if code2 == 0:
         for qr_data in simplify_records(items):

@@ -8,6 +8,7 @@ from docx import Document
 from docx.shared import Cm
 import logging
 import os
+import ast
 
 default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
 app_id = 'cli_a514aea9fa79900b'
@@ -36,6 +37,7 @@ def check_config_file():
     configure["配置说明"] = {"说明": desc}
     configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
     configure["标签"] = {'标签行列': (7, 3), '大小': (6.3, 3.8), '标签边距_上下左右': (0, 0, 0, 0.2)}
+    configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人')}
     # 检查飞书配置文件  feishu-config.ini，如果不存在，则创建
     if not os.path.exists('./feishu-config.ini'):
         # utf-8 编码写入配置文件
@@ -72,26 +74,30 @@ def check_config_file():
 
     at = configure.get('SECRET', 'app_token')
     ti = configure.get('SECRET', 'table_id')
-    logging.info(f'feishu-config.ini app_token:{at}, table_id:{ti}')
+    logging.debug(f'feishu-config.ini app_token:{at}, table_id:{ti}')
 
     # 读取配置文件中的说明
     desc = configure.get('配置说明', '说明', fallback=None)
-    logging.info(f'feishu-config.ini desc:{desc}')
+    logging.debug(f'feishu-config.ini desc:{desc}')
     # 读取配置文件中的纸张大小, paper_size = configure.get('打印纸张', '宽高', fallback=None)
     paper_size = configure.get('打印纸张', 'page_size', fallback=None)
-    logging.info(f'feishu-config.ini paper_size:{paper_size}')
+    logging.debug(f'feishu-config.ini paper_size:{paper_size}')
     # 读取配置文件中的边距
     paper_margin = configure.get('打印纸张', '边距_上下左右', fallback=None)
-    logging.info(f'feishu-config.ini paper_margin:{paper_margin}')
+    logging.debug(f'feishu-config.ini paper_margin:{paper_margin}')
     # 读取配置文件中的标签行列
     label_row_col = configure.get('标签', '标签行列', fallback=None)
-    logging.info(f'feishu-config.ini label_row_col:{label_row_col}')
+    logging.debug(f'feishu-config.ini label_row_col:{label_row_col}')
     # 读取配置文件中的标签大小
     label_size = configure.get('标签', '大小', fallback=None)
-    logging.info(f'feishu-config.ini label_size:{label_size}')
+    logging.debug(f'feishu-config.ini label_size:{label_size}')
     # 读取配置文件中的标签大小
     label_margin = configure.get('标签', '标签边距_上下左右', fallback=None)
-    logging.info(f'feishu-config.ini label_margin:{label_margin}')
+    logging.debug(f'feishu-config.ini label_margin:{label_margin}')
+    # 读取配置文件中的字段
+    content_colum = configure.get('二维码内容字段', '字段', fallback=None)
+    st = ast.literal_eval(content_colum)
+    logging.debug(f'feishu-config.ini content_colum:{st}')
     return True
 
 
@@ -140,38 +146,38 @@ def list_records(tenant_access_token_p=None, app_token_p=None, table_id_p=None, 
 
 
 def get_simple_qr_data(item):
-    # item to qr_data
+    qr_data_ = {}
     try:
-        qr_data = {}
         fields = item.get('fields', {})
-        qr_data['Uid'] = item.get('record_id', '')
+        qr_data_['Uid'] = item.get('record_id', '')
         # qr_data['User'] = fields.get('使用人', [{}])[0].get('name', '')
-        qr_data['User'] = fields.get('使用人', '')
-        # date format: 2024/01/05
-        time_stamp = fields.get('录入日期', 0)
-        qr_data['Date'] = time.strftime("%Y%m%d", time.localtime(time_stamp / 1000))
-        qr_data['Dev'] = fields.get('设备名称', '')
-        qr_data['DevId'] = fields.get('设备ID', '')
-        qr_data['Proj'] = fields.get('项目', '')
+        for key in ast.literal_eval(configure.get('二维码内容字段', '字段')):
+            if '日期' in key or '时间' in key or 'time' in key:
+                time_stamp = fields.get(key, 0)
+                qr_data_[key] = time.strftime("%Y%m%d", time.localtime(time_stamp / 1000))
+            else:
+                qr_data_[key] = fields.get(key, '')
         # logging.info(f'qr_data:{qr_data}')
     except Exception as e:
         logging.info(f'####got exception:{e}')
-        qr_data = None
-    return qr_data
+        qr_data_ = None
+    return qr_data_
 
 
-def simplify_records(items) -> list:
-    for item in items:
-        qr_data = get_simple_qr_data(item)
-        if qr_data is None:
+def simplify_records(items_) -> list:
+    for item in items_:
+        qr_data__ = get_simple_qr_data(item)
+        if qr_data__ is None:
             continue
-        yield qr_data
+        yield qr_data__
 
 
-def gen_qrcode_by_qr_data(qr_data):
+def gen_qrcode_by_qr_data(_qr_data):
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
-    info = f"Uid：{qr_data['Uid']}\nDevId：{qr_data['DevId']}\nDev：{qr_data['Dev']}\nProj：{qr_data['Proj']}\nUser：{qr_data['User']}\nDate：{qr_data['Date']}"
-    # logging.info(f'{info}')
+    info = str()
+    for key in _qr_data:
+        info = "".join([info, key, ": ", _qr_data[key], '\n'])
+    logging.info(f'join result {info}')
     qr.add_data(info)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
@@ -202,7 +208,7 @@ def gen_qrcode_by_qr_data(qr_data):
     new_image.paste(img, (400, 0))
 
     # Save the result
-    new_image.save(f"./qrcodes/qrcode_{qr_data['Uid']}.png")
+    new_image.save(f"./qrcodes/qrcode_{_qr_data['Uid']}.png")
 
 
 def insert_images_into_word():
@@ -294,7 +300,7 @@ if code1 == 0:
     logging.info(f'code2:{code2} records sizes:{len(items)}')
     if code2 == 0:
         for qr_data in simplify_records(items):
-            logging.info(f'qr_data:{qr_data["DevId"]}')
+            logging.info(f'qr_data:{qr_data}')
             gen_qrcode_by_qr_data(qr_data)
         insert_images_into_word()
         logging.info(f'Suceessfully generated qrcodes and inserted into word, done!')

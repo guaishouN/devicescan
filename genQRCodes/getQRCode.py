@@ -5,10 +5,12 @@ import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import time
 from docx import Document
-from docx.shared import Cm
+from docx.shared import Cm, Pt, Inches
 import logging
 import os
 import ast
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE
 
 default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
 app_id = 'cli_a514aea9fa79900b'
@@ -36,7 +38,7 @@ def check_config_file():
     desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。"
     configure["配置说明"] = {"说明": desc}
     configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
-    configure["标签"] = {'标签行列': (7, 3), '大小': (6.3, 3.8), '标签边距_上下左右': (0, 0, 0, 0.2)}
+    configure["标签"] = {'标签行列': (7, 3), '大小': (6.3, 3.8)}
     configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人')}
     # 检查飞书配置文件  feishu-config.ini，如果不存在，则创建
     if not os.path.exists('./feishu-config.ini'):
@@ -99,6 +101,91 @@ def check_config_file():
     st = ast.literal_eval(content_colum)
     logging.debug(f'feishu-config.ini content_colum:{st}')
     return True
+
+
+def insert_images_into_word():
+    folder_path = './qrcodes'
+    # 创建一个Word文档对象，A4纸张 210mm*297mm
+    document = Document()
+    paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
+    page_size = ast.literal_eval(paper_size_str)
+    print(f"w{page_size[0]}  h{page_size[1]}")
+    # 设置页面大小为A4纸张，210mm*297mm
+    document.styles['Normal'].font.name = u'宋体'
+    # 行间距为0倍字体大小
+    document.styles['Normal'].paragraph_format.line_spacing = Pt(0)
+    # 设置段前和段后间距为0
+
+    label_size_str = configure.get('标签', '大小', fallback=None)
+    label_size = ast.literal_eval(label_size_str)
+
+    paper_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
+    paper_margin = ast.literal_eval(paper_margin_str)
+
+    section = document.sections[0]
+    section.page_width = Cm(page_size[0])
+    section.page_height = Cm(page_size[1])
+    section.top_margin = Cm(paper_margin[0])
+    section.bottom_margin = Cm(paper_margin[1])
+    section.left_margin = Cm(paper_margin[2])
+    section.right_margin = Cm(paper_margin[3])
+    # 遍历文件夹中的图片文件
+    image_files = [f for f in os.listdir(folder_path) if f.endswith(('.png'))]
+
+    label_row_col_str = configure.get('标签', '标签行列', fallback=None)
+    label_row_col = ast.literal_eval(label_row_col_str)
+    rows = label_row_col[0]
+    cols = label_row_col[1]
+    images_per_page = rows * cols
+    row_s = (page_size[0]/cols, page_size[1]/rows)
+    print(f"cell size{row_s}")
+    table = None
+    cell_index = 0
+    for i, image_file in enumerate(image_files, start=1):
+        if i % images_per_page == 1:
+            table = document.add_table(rows=rows, cols=cols)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            # for row in table.rows:
+            #     row.height = Cm(row_s[1])
+            # for col in table.columns:
+            #     col.width = Cm(row_s[0])
+            cell_index = 0
+
+        # 获取当前单元格
+        cell = table.cell(cell_index // cols, cell_index % cols)
+        paragraph = cell.add_paragraph()
+        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        cell.height = Cm(row_s[1])
+        cell.width = Cm(row_s[0])
+        # cell.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+        # cell.width_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+        cell.space_before = Pt(0)
+        cell.space_after = Pt(0)
+        paragraph.paragraph_format.line_spacing = Pt(0)
+        image_path = os.path.join(folder_path, image_file)
+        run = paragraph.add_run()
+        # run.add_picture(image_path, width=Cm(row_s[0]-(row_s[0]/5)))
+        run.add_picture(image_path, width=Cm(2.5))
+        paragraph.alignment = 1
+        cell_index += 1
+
+    # 先清空目录下的所有文件
+    for f in os.listdir('./qrcodes'):
+        try:
+            os.remove(os.path.join('./qrcodes', f))
+        except Exception as e:
+            logging.info(f'####got exception:{e}')
+            continue
+    # try 刪除目录./qrcodes
+    try:
+        os.rmdir('./qrcodes')
+    except Exception as e:
+        logging.info(f'####got exception:{e}')
+        pass
+
+    # 保存文档
+    time_str = time.strftime("打印%Y%m%d%H%M%S", time.localtime())
+    document.save(f'./{time_str}.docx')
 
 
 def get_tenant_access_token(app_id=None, app_secret=None, config_file=None):
@@ -184,7 +271,7 @@ def gen_qrcode_by_qr_data(_qr_data):
     # img.save(f"./qrcodes/PPPPPPP.png")
     text_lines = info.split('\n')
     # Create a new image with white background
-    new_image = Image.new("RGB", (400 + 480, 480), "white")
+    new_image = Image.new("RGB", (400 + 490, 490), "white")
 
     # Get a drawing context
     draw = ImageDraw.Draw(new_image)
@@ -209,77 +296,6 @@ def gen_qrcode_by_qr_data(_qr_data):
 
     # Save the result
     new_image.save(f"./qrcodes/qrcode_{_qr_data['Uid']}.png")
-
-
-def insert_images_into_word():
-    folder_path = './qrcodes'
-    # 创建一个Word文档对象，A4纸张 210mm*297mm
-    document = Document()
-    # 设置页面大小为A4纸张，210mm*297mm
-    document.styles['Normal'].font.name = u'宋体'
-    # 行间距为0倍字体大小
-    document.styles['Normal'].paragraph_format.line_spacing = 1.11
-
-    # 设置A4纸张，页距：上下各1.54cm 左右各0.78cm，单标签大小：宽6.3cm 高3.8
-    section = document.sections[0]
-    section.page_width = Cm(21)
-    section.page_height = Cm(29.7)
-    section.top_margin = Cm(1.56)
-    section.bottom_margin = Cm(1.3)
-    section.left_margin = Cm(0.78)
-    section.right_margin = Cm(0.78)
-    # 遍历文件夹中的图片文件
-    image_files = [f for f in os.listdir(folder_path) if f.endswith(('.png'))]
-
-    # 每页3列*7行的方式排版
-    rows = 7
-    cols = 3
-    images_per_page = rows * cols
-
-    for i, image_file in enumerate(image_files, start=1):
-        # 在新的一页开始时，添加一个表格, 每页3列*7行的方式排版
-        # 表格固定width=6.3cm height=3.7cm     
-        if i % images_per_page == 1:
-            table = document.add_table(rows=rows, cols=cols)
-            for row in table.rows:
-                row.height = Cm(3.7)
-            for col in table.columns:
-                col.width = Cm(6.3)
-            # table.style = 'Table Grid'
-            cell_index = 0
-
-        # 获取当前单元格
-        cell = table.cell(cell_index // cols, cell_index % cols)
-
-        # 插入图片到表格单元格
-        image_path = os.path.join(folder_path, image_file)
-        # 顶格插入图片        
-        # cell.add_paragraph().add_run().add_picture(image_path, width=Cm(6.3), height=Cm(3.8))
-
-        # 居中插入图片
-        paragraph = cell.paragraphs[0]
-        run = paragraph.add_run()
-        run.add_picture(image_path, width=Cm(6.2), height=Cm(3.5))
-        run.alignment = 2
-        cell_index += 1
-
-    # 先清空目录下的所有文件
-    for f in os.listdir('./qrcodes'):
-        try:
-            os.remove(os.path.join('./qrcodes', f))
-        except Exception as e:
-            logging.info(f'####got exception:{e}')
-            continue
-    # try 刪除目录./qrcodes
-    try:
-        os.rmdir('./qrcodes')
-    except Exception as e:
-        logging.info(f'####got exception:{e}')
-        pass
-
-    # 保存文档
-    time_str = time.strftime("打印%Y%m%d%H%M%S", time.localtime())
-    document.save(f'./{time_str}.docx')
 
 
 def print_log(log_str):

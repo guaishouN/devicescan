@@ -20,8 +20,8 @@ table_id = 'tbl3OBzMMqjX79gN'
 bg_qrcode = 'white'
 bg_label = 'white'
 bg_content = 'white'
-cl_qrcode = 'green'
-cl_text = 'red'
+cl_qrcode = 'black'
+cl_text = 'black'
 
 
 @dataclass
@@ -69,7 +69,7 @@ page_conf = PageConf()
 
 
 def check_config_file():
-    global configure
+    global configure, cl_qrcode, cl_text
     # 解析并读取配置文件feishu-config.ini
     configure["多维表格地址"] = {'url': default_table_url}
     # 在config文件中加入注释"单位为cm"
@@ -83,7 +83,7 @@ def check_config_file():
         '字体大小': 30,
         '位置_左右': '左'
     }
-
+    configure["颜色"] = {'二维码颜色': 'black', '文本颜色': 'black'}
     configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人')}
     # 检查飞书配置文件  feishu-config.ini，如果不存在，则创建
     if not os.path.exists('./feishu-config.ini'):
@@ -122,6 +122,9 @@ def check_config_file():
     at = configure.get('SECRET', 'app_token')
     ti = configure.get('SECRET', 'table_id')
     logging.debug(f'feishu-config.ini app_token:{at}, table_id:{ti}')
+
+    cl_qrcode = configure.get('颜色', '二维码颜色')
+    cl_text = configure.get('颜色', '文本颜色')
 
     # 读取配置文件中的说明
     desc = configure.get('配置说明', '说明', fallback=None)

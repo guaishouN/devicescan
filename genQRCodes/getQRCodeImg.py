@@ -73,7 +73,7 @@ def check_config_file():
     # 解析并读取配置文件feishu-config.ini
     configure["多维表格地址"] = {'url': default_table_url}
     # 在config文件中加入注释"单位为cm"
-    desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。"
+    desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。可选常用颜色: white black green red blue yellow"
     configure["配置说明"] = {"说明": desc}
     configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
     configure["标签"] = {'标签行列': (7, 3)}

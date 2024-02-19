@@ -13,7 +13,6 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE
 import win32print
 
-
 default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
 app_id = 'cli_a514aea9fa79900b'
 app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
@@ -109,18 +108,18 @@ def check_config_file():
     return True
 
 
-def gen_big_picture():
-    base_img_file_path = f"./qrcode_base.png"
+def get_big_picture_draw() -> (Image, ImageDraw):
     paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
     page_size = ast.literal_eval(paper_size_str)
     paper_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
     paper_margin = ast.literal_eval(paper_margin_str)
-    img_size_cm = (page_size[0]-paper_margin[2]-paper_margin[3], page_size[1]-paper_margin[0]-paper_margin[1])
+    img_size_cm = (page_size[0] - paper_margin[2] - paper_margin[3], page_size[1] - paper_margin[0] - paper_margin[1])
     img_size_pixel = (cm_to_pixels(img_size_cm[0]), cm_to_pixels(img_size_cm[1]))
     new_image = Image.new("RGB", img_size_pixel, "green")
-    draw = ImageDraw.Draw(new_image)
+    return new_image, ImageDraw.Draw(new_image)
 
-    new_image.save(base_img_file_path)
+
+def get_docx_document() -> Document:
     document = Document()
     paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
     page_size = ast.literal_eval(paper_size_str)
@@ -131,7 +130,6 @@ def gen_big_picture():
     document.styles['Normal'].paragraph_format.line_spacing = Pt(0)
     paper_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
     paper_margin = ast.literal_eval(paper_margin_str)
-
     section = document.sections[0]
     section.page_width = Cm(page_size[0])
     section.page_height = Cm(page_size[1])
@@ -139,94 +137,26 @@ def gen_big_picture():
     section.bottom_margin = Cm(paper_margin[1])
     section.left_margin = Cm(paper_margin[2])
     section.right_margin = Cm(paper_margin[3])
+    return document
+
+
+def save_big_picture_to_docx(document: Document, img: Image):
+    base_img_file_path = f"./qrcode_base.png"
+    img.save(base_img_file_path)
     paragraph = document.add_paragraph()
     run = paragraph.add_run()
-    run.add_picture(base_img_file_path, width=Cm(img_size_cm[0]), height=Cm(img_size_cm[1]))
-    time_str = time.strftime("img%Y%m%d%H%M%S", time.localtime())
-    document.save(f'./{time_str}.docx')
-
-
-def insert_images_into_word():
-    folder_path = './qrcodes'
-    # 创建一个Word文档对象，A4纸张 210mm*297mm
-    document = Document()
     paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
     page_size = ast.literal_eval(paper_size_str)
-    print(f"w{page_size[0]}  h{page_size[1]}")
-    # 设置页面大小为A4纸张，210mm*297mm
-    document.styles['Normal'].font.name = u'宋体'
-    # 行间距为0倍字体大小
-    document.styles['Normal'].paragraph_format.line_spacing = Pt(0)
-    # 设置段前和段后间距为0
-
-    label_size_str = configure.get('标签', '大小', fallback=None)
-    label_size = ast.literal_eval(label_size_str)
-
     paper_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
     paper_margin = ast.literal_eval(paper_margin_str)
+    img_size_cm = (page_size[0] - paper_margin[2] - paper_margin[3], page_size[1] - paper_margin[0] - paper_margin[1])
+    run.add_picture(base_img_file_path, width=Cm(img_size_cm[0]), height=Cm(img_size_cm[1]))
 
-    section = document.sections[0]
-    section.page_width = Cm(page_size[0])
-    section.page_height = Cm(page_size[1])
-    section.top_margin = Cm(paper_margin[0])
-    section.bottom_margin = Cm(paper_margin[1])
-    section.left_margin = Cm(paper_margin[2])
-    section.right_margin = Cm(paper_margin[3])
-    # 遍历文件夹中的图片文件
-    image_files = [f for f in os.listdir(folder_path) if f.endswith(('.png'))]
 
-    label_row_col_str = configure.get('标签', '标签行列', fallback=None)
-    label_row_col = ast.literal_eval(label_row_col_str)
-    rows = label_row_col[0]
-    cols = label_row_col[1]
-    images_per_page = rows * cols
-    row_s = (page_size[0] / cols, page_size[1] / rows)
-    print(f"cell size{row_s}")
-    table = None
-    cell_index = 0
-    for i, image_file in enumerate(image_files, start=1):
-        if i % images_per_page == 1:
-            table = document.add_table(rows=rows, cols=cols)
-            table.alignment = WD_TABLE_ALIGNMENT.CENTER
-            # for row in table.rows:
-            #     row.height = Cm(row_s[1])
-            # for col in table.columns:
-            #     col.width = Cm(row_s[0])
-            cell_index = 0
-
-        # 获取当前单元格
-        cell = table.cell(cell_index // cols, cell_index % cols)
-        paragraph = cell.add_paragraph()
-        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        cell.height = Cm(row_s[1])
-        cell.width = Cm(row_s[0])
-        # cell.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-        # cell.width_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-        cell.space_before = Pt(0)
-        cell.space_after = Pt(0)
-        paragraph.paragraph_format.line_spacing = Pt(0)
-        image_path = os.path.join(folder_path, image_file)
-        run = paragraph.add_run()
-        # run.add_picture(image_path, width=Cm(row_s[0]-(row_s[0]/5)))
-        run.add_picture(image_path, width=Cm(2.5))
-        paragraph.alignment = 1
-        cell_index += 1
-
-    # 先清空目录下的所有文件
-    for f in os.listdir('./qrcodes'):
-        try:
-            os.remove(os.path.join('./qrcodes', f))
-        except Exception as e:
-            logging.info(f'####got exception:{e}')
-            continue
-    # try 刪除目录./qrcodes
-    try:
-        os.rmdir('./qrcodes')
-    except Exception as e:
-        logging.info(f'####got exception:{e}')
-        pass
-
-    # 保存文档
+def insert_images_into_docx():
+    document = get_docx_document()
+    img, draw = get_big_picture_draw()
+    save_big_picture_to_docx(document, img)
     time_str = time.strftime("打印%Y%m%d%H%M%S", time.localtime())
     document.save(f'./{time_str}.docx')
 
@@ -310,8 +240,9 @@ def gen_qrcode_by_qr_data(_qr_data):
     rows = label_row_col[0]
     cols = label_row_col[1]
     row_size_cm = (page_size[0] / cols, page_size[1] / rows)
-    margin_pixels = 20
-    row_size_pixels = (cm_to_pixels(row_size_cm[0])-margin_pixels, cm_to_pixels(row_size_cm[1])-margin_pixels)
+    margin_pixels = (10, 10)
+    row_size_pixels = (cm_to_pixels(row_size_cm[0]) - margin_pixels[0], cm_to_pixels(row_size_cm[1]) - margin_pixels[1])
+    min_direction = min(min(row_size_pixels[0], row_size_pixels[1]), 500)
 
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     info = str()
@@ -321,17 +252,18 @@ def gen_qrcode_by_qr_data(_qr_data):
     qr.add_data(info)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
+    img = img.resize((min_direction, min_direction))
     img.save(f"./qrcodes/PPPPPPP.png")
     text_lines = info.split('\n')
     # Create a new image with white background
-    new_image = Image.new("RGB", (row_size_pixels[0]*2, row_size_pixels[0]), "white")
+    new_image = Image.new("RGB", (row_size_pixels[0], row_size_pixels[1]), "white")
 
     # Get a drawing context
     draw = ImageDraw.Draw(new_image)
 
     # Set a font
     # font = ImageFont.load_default()
-    font_size = 34
+    font_size = int(min_direction/10)
     font = ImageFont.truetype("msyhl.ttc", font_size)
 
     # Set the position to start drawing the text
@@ -342,10 +274,10 @@ def gen_qrcode_by_qr_data(_qr_data):
         if "Uid" in line:
             continue
         draw.text(text_position, line, font=font, fill="black")
-        text_position = (text_position[0], text_position[1] + font_size + 18)
+        text_position = (text_position[0], text_position[1] + font_size + 10)
 
-    # Paste the original image on the right side
-    new_image.paste(img, (row_size_pixels[0], 0))
+    # Paste the original image on the right side, box=left, upper, right, and lower
+    new_image.paste(img, (row_size_pixels[0]-min_direction, 5))
 
     # Save the result
     new_image.save(f"./qrcodes/qrcode_{_qr_data['Uid']}.png")
@@ -358,7 +290,6 @@ def print_log(log_str):
 
 
 check_config_file()
-gen_big_picture()
 
 code1, msg1, tenant_access_token = get_tenant_access_token(app_id=app_id, app_secret=app_secret)
 logging.info(f'code1:{code1} tenant_access_token:{tenant_access_token}')
@@ -373,11 +304,9 @@ if code1 == 0:
         for qr_data in simplify_records(items):
             logging.info(f'qr_data:{qr_data}')
             gen_qrcode_by_qr_data(qr_data)
-        # insert_images_into_word()
+        insert_images_into_docx()
         logging.info(f'Suceessfully generated qrcodes and inserted into word, done!')
     else:
         logging.info(f'list_records failed!!, code:{code2}')
 else:
     logging.info(f'get_tenant_access_token failed!!, code:{code1}')
-
-

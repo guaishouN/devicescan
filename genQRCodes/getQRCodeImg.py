@@ -17,6 +17,11 @@ app_id = 'cli_a514aea9fa79900b'
 app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
 app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
 table_id = 'tbl3OBzMMqjX79gN'
+bg_qrcode = 'white'
+bg_label = 'white'
+bg_content = 'white'
+cl_qrcode = 'green'
+cl_text = 'red'
 
 
 @dataclass
@@ -25,6 +30,7 @@ class TextConf:
     items: tuple | None = None
     font_size = 30
     left = True
+
 
 @dataclass
 class PageConf:
@@ -160,7 +166,7 @@ def check_config_file():
 
 
 def get_big_picture_draw() -> (Image, ImageDraw):
-    new_image = Image.new("RGB", page_conf.content_size_pixels, "green")
+    new_image = Image.new("RGB", page_conf.content_size_pixels, bg_content)
     return new_image, ImageDraw.Draw(new_image)
 
 
@@ -209,9 +215,25 @@ def insert_images_into_docx():
         print(f"cell_position = {cell_position}")
         image_path = os.path.join(folder_path, image_file)
         label = Image.open(image_path)
-        img.paste(label, (cell_position[1]*page_conf.label_size_pixels[0], cell_position[0]*page_conf.label_size_pixels[1]))
+        img.paste(label, (cell_position[1] * page_conf.label_size_pixels[0],
+                          cell_position[0] * page_conf.label_size_pixels[1]))
         cell_index += 1
     save_big_picture_to_docx(document, img)
+
+    # 先清空目录下的所有文件
+    for f in os.listdir('./qrcodes'):
+        try:
+            os.remove(os.path.join('./qrcodes', f))
+        except Exception as e:
+            logging.info(f'####got exception:{e}')
+            continue
+    # try 刪除目录./qrcodes
+    try:
+        os.rmdir('./qrcodes')
+    except Exception as e:
+        logging.info(f'####got exception:{e}')
+        pass
+
     time_str = time.strftime("打印%Y%m%d%H%M%S", time.localtime())
     document.save(f'./{time_str}.docx')
 
@@ -304,7 +326,7 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     logging.info(f'join _qr_data result {qr_info}')
     qr.add_data(qr_info)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image(fill_color=cl_qrcode, back_color=bg_qrcode)
     img = img.resize((page_conf.min_direction_pixels, page_conf.min_direction_pixels))
     # img.save(f"./qrcodes/PPPPPPP.png")
 
@@ -319,7 +341,7 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     # left or not
     is_left = text_conf.left
 
-    new_image = Image.new("RGB", (page_conf.label_size_pixels[0], page_conf.label_size_pixels[1]), "gray")
+    new_image = Image.new("RGB", (page_conf.label_size_pixels[0], page_conf.label_size_pixels[1]), bg_label)
     draw = ImageDraw.Draw(new_image)
     if is_left:
         text_position = (20, 25)
@@ -327,17 +349,17 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
         for line in text_lines:
             if "Uid" in line:
                 continue
-            draw.text(text_position, line, font=font, fill="black")
+            draw.text(text_position, line, font=font, fill=cl_text)
             text_position = (text_position[0], text_position[1] + font_size + 10)
         # Draw Qrcode
         new_image.paste(img, (page_conf.label_size_pixels[0] - page_conf.min_direction_pixels, 0))
     else:
         # Draw text
-        text_position = (page_conf.min_direction_pixels+10, 25)
+        text_position = (page_conf.min_direction_pixels + 10, 25)
         for line in text_lines:
             if "Uid" in line:
                 continue
-            draw.text(text_position, line, font=font, fill="black")
+            draw.text(text_position, line, font=font, fill=cl_text)
             text_position = (text_position[0], text_position[1] + font_size + 10)
 
         # Draw Qrcode

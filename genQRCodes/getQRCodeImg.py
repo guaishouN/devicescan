@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 import requests
 import configparser
 import json
@@ -22,6 +21,9 @@ bg_label = 'white'
 bg_content = 'white'
 cl_qrcode = 'black'
 cl_text = 'black'
+
+"""log 以追加的形式打印到文件夹./qrcodes下"""
+logging.basicConfig(level=logging.DEBUG, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 @dataclass
@@ -58,10 +60,6 @@ def cm_to_pixels(cm, dpi=300):
 if not os.path.exists('./qrcodes'):
     os.makedirs('./qrcodes')
 
-"""log 以追加的形式打印到文件夹./qrcodes下"""
-# logging.basicConfig(level=logging.DEBUG, filename='./qrcodes/temp_qrlog.log', filemode='a', format='%(asctime)s - %(
-# levelname)s - %(message)s')
-logging.basicConfig(level=logging.DEBUG, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 configure = configparser.ConfigParser()
 
 text_conf = TextConf()
@@ -377,24 +375,26 @@ def print_log(log_str):
     pass
 
 
-check_config_file()
+def do_main():
+    check_config_file()
+    code1, msg1, tenant_access_token = get_tenant_access_token(app_id=app_id, app_secret=app_secret)
+    logging.info(f'code1:{code1} tenant_access_token:{tenant_access_token}')
 
-code1, msg1, tenant_access_token = get_tenant_access_token(app_id=app_id, app_secret=app_secret)
-logging.info(f'code1:{code1} tenant_access_token:{tenant_access_token}')
-
-app_token_cf = configure.get('SECRET', 'app_token')
-table_id_cf = configure.get('SECRET', 'table_id')
-if code1 == 0:
-    code2, msg2, items = list_records(tenant_access_token_p=tenant_access_token, app_token_p=app_token_cf,
-                                      table_id_p=table_id_cf)
-    logging.info(f'code2:{code2} records sizes:{len(items)}')
-    if code2 == 0:
-        for text_data, qr_data in simplify_records(items):
-            logging.info(f' text_data:{text_data}  qr_data:{qr_data}')
-            gen_qrcode_by_qr_data(text_data, qr_data)
-        insert_images_into_docx()
-        logging.info(f'Suceessfully generated qrcodes and inserted into word, done!')
+    app_token_cf = configure.get('SECRET', 'app_token')
+    table_id_cf = configure.get('SECRET', 'table_id')
+    if code1 == 0:
+        code2, msg2, items = list_records(tenant_access_token_p=tenant_access_token, app_token_p=app_token_cf,
+                                          table_id_p=table_id_cf)
+        logging.info(f'code2:{code2} records sizes:{len(items)}')
+        if code2 == 0:
+            for text_data, qr_data in simplify_records(items):
+                logging.info(f' text_data:{text_data}  qr_data:{qr_data}')
+                gen_qrcode_by_qr_data(text_data, qr_data)
+            insert_images_into_docx()
+            logging.info(f'Suceessfully generated qrcodes and inserted into word, done!')
+        else:
+            logging.info(f'list_records failed!!, code:{code2}')
     else:
-        logging.info(f'list_records failed!!, code:{code2}')
-else:
-    logging.info(f'get_tenant_access_token failed!!, code:{code1}')
+        logging.info(f'get_tenant_access_token failed!!, code:{code1}')
+
+# do_main()

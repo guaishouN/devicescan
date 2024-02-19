@@ -26,6 +26,23 @@ class TextConf:
     font_size = 30
     left = True
 
+@dataclass
+class PageConf:
+    row_colum: tuple | None = None
+
+    page_size: tuple | None = None
+    page_margin: tuple | None = None
+
+    label_size_cm: tuple | None = None
+    label_size_pixels: tuple | None = None
+    label_margin_pixels = 10
+
+    content_size_cm: tuple | None = None
+    content_size_pixels: tuple | None = None
+    content_margin_pixels = 10
+
+    min_direction_pixels = 100
+
 
 def cm_to_pixels(cm, dpi=300):
     return int(cm * dpi / 2.54)
@@ -42,6 +59,7 @@ logging.basicConfig(level=logging.DEBUG, filemode='a', format='%(asctime)s - %(l
 configure = configparser.ConfigParser()
 
 text_conf = TextConf()
+page_conf = PageConf()
 
 
 def check_config_file():
@@ -102,15 +120,7 @@ def check_config_file():
     # 读取配置文件中的说明
     desc = configure.get('配置说明', '说明', fallback=None)
     logging.debug(f'feishu-config.ini desc:{desc}')
-    # 读取配置文件中的纸张大小, paper_size = configure.get('打印纸张', '宽高', fallback=None)
-    paper_size = configure.get('打印纸张', 'page_size', fallback=None)
-    logging.debug(f'feishu-config.ini paper_size:{paper_size}')
-    # 读取配置文件中的边距
-    paper_margin = configure.get('打印纸张', '边距_上下左右', fallback=None)
-    logging.debug(f'feishu-config.ini paper_margin:{paper_margin}')
-    # 读取配置文件中的标签行列
-    label_row_col = configure.get('标签', '标签行列', fallback=None)
-    logging.debug(f'feishu-config.ini label_row_col:{label_row_col}')
+
     # 读取配置文件中的字段
     content_colum = configure.get('二维码内容字段', '字段', fallback=None)
     st = ast.literal_eval(content_colum)
@@ -124,57 +134,84 @@ def check_config_file():
     font_size_str = configure.get('文本显示', '字体大小', fallback=None)
     text_conf.font_size = int(font_size_str)
     logging.debug(f'feishu-config.ini text_conf:{str(text_conf)} {text_conf.font_size}')
+
+    # 纸张配置
+    label_row_col_str = configure.get('标签', '标签行列', fallback=None)
+    label_row_col = ast.literal_eval(label_row_col_str)
+    rows = label_row_col[0]
+    cols = label_row_col[1]
+    page_conf.row_colum = (rows, cols)
+
+    paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
+    page_conf.page_size = page_size = ast.literal_eval(paper_size_str)
+    page_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
+    page_conf.page_margin = page_margin = ast.literal_eval(page_margin_str)
+
+    page_conf.content_size_cm = content_size_cm = (page_size[0] - page_margin[2] - page_margin[3],
+                                                   page_size[1] - page_margin[0] - page_margin[1])
+    page_conf.content_size_pixels = (cm_to_pixels(content_size_cm[0]), cm_to_pixels(content_size_cm[1]))
+
+    page_conf.label_size_cm = label_size_cm = (content_size_cm[0] / cols, content_size_cm[1] / rows)
+    page_conf.label_size_pixels = (cm_to_pixels(label_size_cm[0]), cm_to_pixels(label_size_cm[1]))
+
+    page_conf.min_direction_pixels = min(min(page_conf.label_size_pixels[0], page_conf.label_size_pixels[1]), 500)
+
     return True
 
 
 def get_big_picture_draw() -> (Image, ImageDraw):
-    paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
-    page_size = ast.literal_eval(paper_size_str)
-    paper_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
-    paper_margin = ast.literal_eval(paper_margin_str)
-    img_size_cm = (page_size[0] - paper_margin[2] - paper_margin[3], page_size[1] - paper_margin[0] - paper_margin[1])
-    img_size_pixel = (cm_to_pixels(img_size_cm[0]), cm_to_pixels(img_size_cm[1]))
-    new_image = Image.new("RGB", img_size_pixel, "green")
+    new_image = Image.new("RGB", page_conf.content_size_pixels, "green")
     return new_image, ImageDraw.Draw(new_image)
 
 
 def get_docx_document() -> Document:
     document = Document()
-    paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
-    page_size = ast.literal_eval(paper_size_str)
-    print(f"w{page_size[0]}  h{page_size[1]}")
-    # 设置页面大小为A4纸张，210mm*297mm
     document.styles['Normal'].font.name = u'宋体'
-    # 行间距为0倍字体大小
     document.styles['Normal'].paragraph_format.line_spacing = Pt(0)
-    paper_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
-    paper_margin = ast.literal_eval(paper_margin_str)
     section = document.sections[0]
-    section.page_width = Cm(page_size[0])
-    section.page_height = Cm(page_size[1])
-    section.top_margin = Cm(paper_margin[0])
-    section.bottom_margin = Cm(paper_margin[1])
-    section.left_margin = Cm(paper_margin[2])
-    section.right_margin = Cm(paper_margin[3])
+    section.page_width = Cm(page_conf.page_size[0])
+    section.page_height = Cm(page_conf.page_size[1])
+    section.top_margin = Cm(page_conf.page_margin[0])
+    section.bottom_margin = Cm(page_conf.page_margin[1])
+    section.left_margin = Cm(page_conf.page_margin[2])
+    section.right_margin = Cm(page_conf.page_margin[3])
     return document
 
 
 def save_big_picture_to_docx(document: Document, img: Image):
-    base_img_file_path = f"./qrcode_base.png"
+    base_img_file_path = f"./qrcodes/qrcode_base.png"
     img.save(base_img_file_path)
     paragraph = document.add_paragraph()
     run = paragraph.add_run()
-    paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
-    page_size = ast.literal_eval(paper_size_str)
-    paper_margin_str = configure.get('打印纸张', '边距_上下左右', fallback=None)
-    paper_margin = ast.literal_eval(paper_margin_str)
-    img_size_cm = (page_size[0] - paper_margin[2] - paper_margin[3], page_size[1] - paper_margin[0] - paper_margin[1])
-    run.add_picture(base_img_file_path, width=Cm(img_size_cm[0]), height=Cm(img_size_cm[1]))
+    run.add_picture(base_img_file_path, width=Cm(page_conf.content_size_cm[0]), height=Cm(page_conf.content_size_cm[1]))
 
 
 def insert_images_into_docx():
+    rows = page_conf.row_colum[0]
+    cols = page_conf.row_colum[1]
+    cell_index = 0
+    folder_path = './qrcodes'
     document = get_docx_document()
-    img, draw = get_big_picture_draw()
+    image_files = [f for f in os.listdir(folder_path) if f.endswith('.png')]
+    images_per_page = rows * cols
+    print(f" images_per_page {images_per_page} image_files size={len(image_files)}")
+    img: Image = None
+    draw: ImageDraw = None
+    for i, image_file in enumerate(image_files, start=1):
+        if i % images_per_page == 1:
+            if img is not None:
+                save_big_picture_to_docx(document, img)
+                break
+            img, draw = get_big_picture_draw()
+            cell_index = 0
+
+        # 获取当前单元格
+        cell_position = (cell_index // cols, cell_index % cols)
+        print(f"cell_position = {cell_position}")
+        image_path = os.path.join(folder_path, image_file)
+        label = Image.open(image_path)
+        img.paste(label, (cell_position[1]*page_conf.label_size_pixels[0], cell_position[0]*page_conf.label_size_pixels[1]))
+        cell_index += 1
     save_big_picture_to_docx(document, img)
     time_str = time.strftime("打印%Y%m%d%H%M%S", time.localtime())
     document.save(f'./{time_str}.docx')
@@ -260,17 +297,6 @@ def simplify_records(items_) -> list:
 
 
 def gen_qrcode_by_qr_data(_text_data, _qr_data):
-    paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
-    page_size = ast.literal_eval(paper_size_str)
-    label_row_col_str = configure.get('标签', '标签行列', fallback=None)
-    label_row_col = ast.literal_eval(label_row_col_str)
-    rows = label_row_col[0]
-    cols = label_row_col[1]
-    row_size_cm = (page_size[0] / cols, page_size[1] / rows)
-    margin_pixels = (10, 10)
-    row_size_pixels = (cm_to_pixels(row_size_cm[0]) - margin_pixels[0], cm_to_pixels(row_size_cm[1]) - margin_pixels[1])
-    min_direction = min(min(row_size_pixels[0], row_size_pixels[1]), 500)
-
     # QR Code
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     qr_info = str()
@@ -280,8 +306,8 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     qr.add_data(qr_info)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    img = img.resize((min_direction, min_direction))
-    img.save(f"./qrcodes/PPPPPPP.png")
+    img = img.resize((page_conf.min_direction_pixels, page_conf.min_direction_pixels))
+    # img.save(f"./qrcodes/PPPPPPP.png")
 
     # TEXT
     text_info = str()
@@ -294,7 +320,7 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     # left or not
     is_left = text_conf.left
 
-    new_image = Image.new("RGB", (row_size_pixels[0], row_size_pixels[1]), "white")
+    new_image = Image.new("RGB", (page_conf.label_size_pixels[0], page_conf.label_size_pixels[1]), "gray")
     draw = ImageDraw.Draw(new_image)
     if is_left:
         text_position = (20, 25)
@@ -305,10 +331,10 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
             draw.text(text_position, line, font=font, fill="black")
             text_position = (text_position[0], text_position[1] + font_size + 10)
         # Draw Qrcode
-        new_image.paste(img, (row_size_pixels[0] - min_direction, 0))
+        new_image.paste(img, (page_conf.label_size_pixels[0] - page_conf.min_direction_pixels, 0))
     else:
         # Draw text
-        text_position = (min_direction+10, 25)
+        text_position = (page_conf.min_direction_pixels+10, 25)
         for line in text_lines:
             if "Uid" in line:
                 continue

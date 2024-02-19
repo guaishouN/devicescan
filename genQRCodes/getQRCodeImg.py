@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import requests
 import configparser
 import json
@@ -9,15 +11,20 @@ from docx.shared import Cm, Pt, Inches
 import logging
 import os
 import ast
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE
-import win32print
 
 default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
 app_id = 'cli_a514aea9fa79900b'
 app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
 app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
 table_id = 'tbl3OBzMMqjX79gN'
+
+
+@dataclass
+class TextConf:
+    is_show = True
+    items: tuple | None = None
+    font_size = 30
+    left = True
 
 
 def cm_to_pixels(cm, dpi=300):
@@ -34,6 +41,8 @@ if not os.path.exists('./qrcodes'):
 logging.basicConfig(level=logging.DEBUG, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 configure = configparser.ConfigParser()
 
+text_conf = TextConf()
+
 
 def check_config_file():
     global configure
@@ -43,7 +52,14 @@ def check_config_file():
     desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。"
     configure["配置说明"] = {"说明": desc}
     configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
-    configure["标签"] = {'标签行列': (7, 3), '大小': (6.3, 3.8)}
+    configure["标签"] = {'标签行列': (7, 3)}
+    configure["文本显示"] = {
+        '是否显示': '是',
+        '字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人'),
+        '字体大小': 30,
+        '位置_左右': '左'
+    }
+
     configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人')}
     # 检查飞书配置文件  feishu-config.ini，如果不存在，则创建
     if not os.path.exists('./feishu-config.ini'):
@@ -95,16 +111,19 @@ def check_config_file():
     # 读取配置文件中的标签行列
     label_row_col = configure.get('标签', '标签行列', fallback=None)
     logging.debug(f'feishu-config.ini label_row_col:{label_row_col}')
-    # 读取配置文件中的标签大小
-    label_size = configure.get('标签', '大小', fallback=None)
-    logging.debug(f'feishu-config.ini label_size:{label_size}')
-    # 读取配置文件中的标签大小
-    label_margin = configure.get('标签', '标签边距_上下左右', fallback=None)
-    logging.debug(f'feishu-config.ini label_margin:{label_margin}')
     # 读取配置文件中的字段
     content_colum = configure.get('二维码内容字段', '字段', fallback=None)
     st = ast.literal_eval(content_colum)
     logging.debug(f'feishu-config.ini content_colum:{st}')
+
+    # 读取配置文件中的文本显示
+    left_str = configure.get('文本显示', '位置_左右', fallback=None)
+    text_conf.left = left_str == "左"
+    content_colum = configure.get('文本显示', '字段', fallback=None)
+    text_conf.items = ast.literal_eval(content_colum)
+    font_size_str = configure.get('文本显示', '字体大小', fallback=None)
+    text_conf.font_size = int(font_size_str)
+    logging.debug(f'feishu-config.ini text_conf:{str(text_conf)} {text_conf.font_size}')
     return True
 
 
@@ -207,6 +226,7 @@ def list_records(tenant_access_token_p=None, app_token_p=None, table_id_p=None, 
 
 def get_simple_qr_data(item):
     qr_data_ = {}
+    text_data_ = {}
     try:
         fields = item.get('fields', {})
         qr_data_['Uid'] = item.get('record_id', '')
@@ -217,22 +237,29 @@ def get_simple_qr_data(item):
                 qr_data_[key] = time.strftime("%Y%m%d", time.localtime(time_stamp / 1000))
             else:
                 qr_data_[key] = fields.get(key, '')
-        # logging.info(f'qr_data:{qr_data}')
+
+        for key in text_conf.items:
+            if '日期' in key or '时间' in key or 'time' in key:
+                time_stamp = fields.get(key, 0)
+                text_data_[key] = time.strftime("%Y%m%d", time.localtime(time_stamp / 1000))
+            else:
+                text_data_[key] = fields.get(key, '')
+        # logging.info(f'text_data_:{text_data_}')
     except Exception as e:
         logging.info(f'####got exception:{e}')
         qr_data_ = None
-    return qr_data_
+    return text_data_, qr_data_
 
 
 def simplify_records(items_) -> list:
     for item in items_:
-        qr_data__ = get_simple_qr_data(item)
-        if qr_data__ is None:
+        text_data__, qr_data__ = get_simple_qr_data(item)
+        if qr_data__ is None or text_data__ is None:
             continue
-        yield qr_data__
+        yield text_data__, qr_data__
 
 
-def gen_qrcode_by_qr_data(_qr_data):
+def gen_qrcode_by_qr_data(_text_data, _qr_data):
     paper_size_str = configure.get('打印纸张', 'page_size', fallback=None)
     page_size = ast.literal_eval(paper_size_str)
     label_row_col_str = configure.get('标签', '标签行列', fallback=None)
@@ -244,40 +271,52 @@ def gen_qrcode_by_qr_data(_qr_data):
     row_size_pixels = (cm_to_pixels(row_size_cm[0]) - margin_pixels[0], cm_to_pixels(row_size_cm[1]) - margin_pixels[1])
     min_direction = min(min(row_size_pixels[0], row_size_pixels[1]), 500)
 
+    # QR Code
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
-    info = str()
+    qr_info = str()
     for key in _qr_data:
-        info = "".join([info, key, ": ", _qr_data[key], '\n'])
-    logging.info(f'join result {info}')
-    qr.add_data(info)
+        qr_info = "".join([qr_info, key, ": ", _qr_data[key], '\n'])
+    logging.info(f'join _qr_data result {qr_info}')
+    qr.add_data(qr_info)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
     img = img.resize((min_direction, min_direction))
     img.save(f"./qrcodes/PPPPPPP.png")
-    text_lines = info.split('\n')
-    # Create a new image with white background
-    new_image = Image.new("RGB", (row_size_pixels[0], row_size_pixels[1]), "white")
 
-    # Get a drawing context
-    draw = ImageDraw.Draw(new_image)
-
-    # Set a font
-    # font = ImageFont.load_default()
-    font_size = int(min_direction/10)
+    # TEXT
+    text_info = str()
+    for key in _text_data:
+        text_info = "".join([text_info, key, ": ", _text_data[key], '\n'])
+    text_lines = text_info.split('\n')
+    font_size = text_conf.font_size
     font = ImageFont.truetype("msyhl.ttc", font_size)
 
-    # Set the position to start drawing the text
-    text_position = (20, 50)
+    # left or not
+    is_left = text_conf.left
 
-    # Write each line of text
-    for line in text_lines:
-        if "Uid" in line:
-            continue
-        draw.text(text_position, line, font=font, fill="black")
-        text_position = (text_position[0], text_position[1] + font_size + 10)
+    new_image = Image.new("RGB", (row_size_pixels[0], row_size_pixels[1]), "white")
+    draw = ImageDraw.Draw(new_image)
+    if is_left:
+        text_position = (20, 25)
+        # Draw text
+        for line in text_lines:
+            if "Uid" in line:
+                continue
+            draw.text(text_position, line, font=font, fill="black")
+            text_position = (text_position[0], text_position[1] + font_size + 10)
+        # Draw Qrcode
+        new_image.paste(img, (row_size_pixels[0] - min_direction, 0))
+    else:
+        # Draw text
+        text_position = (min_direction+10, 25)
+        for line in text_lines:
+            if "Uid" in line:
+                continue
+            draw.text(text_position, line, font=font, fill="black")
+            text_position = (text_position[0], text_position[1] + font_size + 10)
 
-    # Paste the original image on the right side, box=left, upper, right, and lower
-    new_image.paste(img, (row_size_pixels[0]-min_direction, 5))
+        # Draw Qrcode
+        new_image.paste(img, (0, 0))
 
     # Save the result
     new_image.save(f"./qrcodes/qrcode_{_qr_data['Uid']}.png")
@@ -301,9 +340,9 @@ if code1 == 0:
                                       table_id_p=table_id_cf)
     logging.info(f'code2:{code2} records sizes:{len(items)}')
     if code2 == 0:
-        for qr_data in simplify_records(items):
-            logging.info(f'qr_data:{qr_data}')
-            gen_qrcode_by_qr_data(qr_data)
+        for text_data, qr_data in simplify_records(items):
+            logging.info(f' text_data:{text_data}  qr_data:{qr_data}')
+            gen_qrcode_by_qr_data(text_data, qr_data)
         insert_images_into_docx()
         logging.info(f'Suceessfully generated qrcodes and inserted into word, done!')
     else:

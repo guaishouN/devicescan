@@ -201,7 +201,6 @@ def insert_images_into_docx():
         if i % images_per_page == 1:
             if img is not None:
                 save_big_picture_to_docx(document, img)
-                break
             img, draw = get_big_picture_draw()
             cell_index = 0
 

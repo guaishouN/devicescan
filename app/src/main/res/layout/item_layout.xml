@@ -6,15 +6,23 @@ android:layout_height="wrap_content"
 android:layout_marginBottom="16dp"
 android:orientation="horizontal">
 <TextView
+    android:id="@+id/key_text"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:textSize="20sp"
     android:textStyle="bold"
     android:textColorHint="@color/colorPrimaryDark"
     android:hint="使用者 : " />
-<TextView
-    android:id="@+id/editTextUser"
+<EditText
+    android:id="@+id/edit_value"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:textSize="20sp"
+    android:hint="设备使用人" />
+<TextView
+    android:id="@+id/value"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:textSize="20sp"
     android:hint="设备使用人" />
 </LinearLayout>

@@ -11,19 +11,19 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.gson.Gson;
 
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.List;
 import cn.bingoogolapple.qrcode.core.BGAQRCodeUtil;
@@ -34,16 +34,34 @@ import pub.devrel.easypermissions.EasyPermissions;
 public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks {
     public final static String TAG = MainActivity.class.getSimpleName();
     public final static String SP_NAME = "Lark";
+    public final static String SP_SETTINGS_STR = "Settings";
     public final static String SP_APP_TOKEN = "app_token";
     public final static String SP_TABLE_ID = "table_id";
     private static final int REQUEST_CODE_QRCODE_PERMISSIONS = 1;
-    private EditText User;
-    private LinearLayout qrContainer;
     private LarkRequestManager larkRequestManager;
     private String recordID, userName;
     private long timestamp;
     private final Gson gson = new Gson();
     private SettingsBean settingsBean = null;
+    private RecyclerView recyclerView;
+    private final QrCodeDataAdapter adapter = new QrCodeDataAdapter();
+    @SuppressLint("HandlerLeak")
+    private final Handler handler = new Handler(){
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what){
+                case LarkRequestManager.OK:
+                    Toast toast=Toast.makeText(MainActivity.this, "设置成功", Toast.LENGTH_SHORT);
+                    toast.show();
+                    break;
+                case LarkRequestManager.ERROR:
+                    Toast toast1=Toast.makeText(MainActivity.this, "设置失败", Toast.LENGTH_SHORT);
+                    toast1.show();
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,29 +69,17 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         setContentView(R.layout.activity_main);
         larkRequestManager = LarkRequestManager.getInstance();
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        BGAQRCodeUtil.setDebug(true);
-        qrContainer = findViewById(R.id.qr_container);
-        @SuppressLint("HandlerLeak")
-        Handler handler = new Handler(){
-            @SuppressLint("HandlerLeak")
-            @Override
-            public void handleMessage(@NonNull Message msg) {
-                super.handleMessage(msg);
-                switch (msg.what){
-                    case LarkRequestManager.OK:
-                        Toast toast=Toast.makeText(MainActivity.this, "设置成功", Toast.LENGTH_SHORT);
-                        toast.show();
-                        break;
-                    case LarkRequestManager.ERROR:
-                        Toast toast1=Toast.makeText(MainActivity.this, "设置失败", Toast.LENGTH_SHORT);
-                        toast1.show();
-                       break;
-                }
-            }
-        };
+        String settingsStr = get(SP_SETTINGS_STR, null);
+        if(!TextUtils.isEmpty(settingsStr)){
+            Log.d(TAG, "onCreate: to parser settings");
+            parseQrSettingData(settingsStr);
+        }
         larkRequestManager.setAppTokenAndTableId(get(SP_APP_TOKEN,null),get(SP_TABLE_ID, null));;
         larkRequestManager.setHandler(handler);
         larkRequestManager.getTenantAccessToken(null);
+        BGAQRCodeUtil.setDebug(true);
+        recyclerView = findViewById(R.id.qr_container);
+        recyclerView.setAdapter(adapter);
     }
 
     @SuppressLint("DefaultLocale")
@@ -123,9 +129,21 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                     if(map.get("使用人")!=null){
                         userName = map.get("User");
                     }
-                    for (String key: map.keySet()) {
 
+                    LinkedList<QrCodeItem> items = new LinkedList<>();
+                    for (String key: map.keySet()) {
+                        if ("Uid".equals(key)){
+                            continue;
+                        }
+                        QrCodeItem item = new QrCodeItem();
+                        item.key = key;
+                        item.value = map.get(key);
+                        if (settingsBean.editable.contains(key)){
+                            item.isEditable = true;
+                        }
+                        items.add(item);
                     }
+                    adapter.setData(items);
                     Log.d(TAG, "onActivityResult: "+map);
                 }
             } catch (Exception e) {
@@ -203,11 +221,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             Log.d(TAG,"parseUrl table_id: " + table_id);
             save(SP_APP_TOKEN, app_token);
             save(SP_TABLE_ID, table_id);
-            String tip = String.format("设置多维表成功 app_token[%s] table_id[%s]",app_token,table_id);
+            String tip = String.format("设置多维表成功 app_token[%s] table_id[%s]",app_token, table_id);
             Toast toast1=Toast.makeText(MainActivity.this, tip, Toast.LENGTH_SHORT);
             toast1.show();
+            save(SP_SETTINGS_STR, resultString);
         }catch (Exception e){
-            e.printStackTrace();
             return false;
         }
         return true;

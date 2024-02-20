@@ -130,7 +130,7 @@ public class LarkRequestManager {
                             listener.onGot(true);
                         }
                     }else{
-                        getHandler().postDelayed(()->getTenantAccessToken(null), TENANT_JOB,10*60*000);
+                        getHandler().postDelayed(()->getTenantAccessToken(null), TENANT_JOB,10*60*1000);
                     }
                 }else{
                     Log.d(TAG, "onResponse failed by code: "+tenantAccessTokenBean);

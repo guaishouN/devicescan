@@ -12,20 +12,20 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
-
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.google.gson.Gson;
+
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
-
 import cn.bingoogolapple.qrcode.core.BGAQRCodeUtil;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
@@ -37,11 +37,13 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     public final static String SP_APP_TOKEN = "app_token";
     public final static String SP_TABLE_ID = "table_id";
     private static final int REQUEST_CODE_QRCODE_PERMISSIONS = 1;
-    private TextView Uid, DevId, Dev, Proj, time;
     private EditText User;
+    private LinearLayout qrContainer;
     private LarkRequestManager larkRequestManager;
     private String recordID, userName;
     private long timestamp;
+    private final Gson gson = new Gson();
+    private SettingsBean settingsBean = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,13 +52,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         larkRequestManager = LarkRequestManager.getInstance();
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         BGAQRCodeUtil.setDebug(true);
-        Uid = findViewById(R.id.editTextUId);
-        DevId = findViewById(R.id.editTextDId);
-        Dev = findViewById(R.id.editTextDev);
-        Proj = findViewById(R.id.editTextProj);
-        time = findViewById(R.id.editTextTime);
-        User = findViewById(R.id.editTextUser);
-
+        qrContainer = findViewById(R.id.qr_container);
         @SuppressLint("HandlerLeak")
         Handler handler = new Handler(){
             @SuppressLint("HandlerLeak")
@@ -78,13 +74,12 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         larkRequestManager.setAppTokenAndTableId(get(SP_APP_TOKEN,null),get(SP_TABLE_ID, null));;
         larkRequestManager.setHandler(handler);
         larkRequestManager.getTenantAccessToken(null);
-
     }
 
     @SuppressLint("DefaultLocale")
     public void onClick(View view){
         timestamp = System.currentTimeMillis();
-        userName = User.getText().toString();
+        //userName = User.getText().toString();
         if (view.getId() == R.id.scan_device_qrcode){
             startActivityForResult(new Intent(this, DeviceScanActivity.class),100);
         }
@@ -107,46 +102,34 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(resultCode == 100 && requestCode == 100){
+        if(resultCode == 100 && requestCode == 100 && data != null){
             String resultString  = data.getStringExtra("scanResult");
-            //String input = "DevId：SZ00000015\nDev：Google Pixel 5\nProj：12.3\" AVX, TAM\nUser：张勇\nDate：20240111";
-            if(!TextUtils.isEmpty(resultString) && resultString.startsWith("https://yesv-desaysv.feishu.cn/base/")){
-                try {
-                    parseUrl(resultString);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }else if(!TextUtils.isEmpty(resultString)){
-                String[] lines = resultString.split("\n");
-                Map<String, String> map = new HashMap<>();
-                for (String line : lines) {
-                    String[] parts = line.split("：");
-                    if (parts.length == 2) {
-                        map.put(parts[0], parts[1]);
+            Log.d(TAG, "onActivityResult: "+resultString);
+            try {
+                if(!TextUtils.isEmpty(resultString) && !parseQrSettingData(resultString) ){
+                    String[] lines = resultString.split("\n");
+                    Log.d(TAG, "onActivityResult: "+ Arrays.toString(lines));
+                    Map<String, String> map = new HashMap<>();
+                    for (String line : lines) {
+                        String[] parts = line.split(":");
+                        if (parts.length == 2) {
+                            map.put(parts[0], parts[1]);
+                        }
                     }
+                    //{Uid=recu1vmufbQ8PR, User=张勇, Dev=Google Pixel 5, Proj=12.3" AVX, TAM, DevId=SZ00000015, Date=20240111}
+                    if(map.get("Uid")!=null){
+                        recordID = map.get("Uid");
+                    }
+                    if(map.get("使用人")!=null){
+                        userName = map.get("User");
+                    }
+                    for (String key: map.keySet()) {
+
+                    }
+                    Log.d(TAG, "onActivityResult: "+map);
                 }
-                //{Uid=recu1vmufbQ8PR, User=张勇, Dev=Google Pixel 5, Proj=12.3" AVX, TAM, DevId=SZ00000015, Date=20240111}
-                if(map.get("Uid")!=null){
-                    Uid.setText(map.get("Uid"));
-                    recordID = map.get("Uid");
-                }
-                if(map.get("DevId")!=null){
-                    DevId.setText(map.get("DevId"));
-                }
-                if(map.get("Dev")!=null){
-                    Dev.setText(map.get("Dev"));
-                }
-                if(map.get("Proj")!=null){
-                    Proj.setText(map.get("Proj"));
-                }
-                if(map.get("Date")!=null){
-                    time.setText(map.get("Date"));
-                }
-                if(map.get("User")!=null){
-                    User.setText(map.get("User"));
-                    userName = map.get("User");
-                }
-                Log.d(TAG, "onActivityResult: "+map);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
@@ -192,31 +175,42 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         larkRequestManager.setHandler(null);
     }
 
-    public void parseUrl(String url) throws Exception{
+    public boolean parseQrSettingData(String resultString){
         //String url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC";
-
-        URL aURL = new URL(url);
-        String query = aURL.getQuery();
-        String[] params = query.split("&");
-
-        Map<String, String> map = new HashMap<String, String>();
-        for (String param : params) {
-            String name = param.split("=")[0];
-            String value = param.split("=")[1];
-            map.put(name, value);
+        if(TextUtils.isEmpty(resultString)){
+            Log.d(TAG, "parseQrSettingData: error empty resultString");
+            return false;
         }
+        try{
+            settingsBean = gson.fromJson(resultString, SettingsBean.class);
+            Log.d(TAG, "parseQrSettingData: "+settingsBean);
+            URL aURL = new URL(settingsBean.url);
+            String query = aURL.getQuery();
+            String[] params = query.split("&");
 
-        Log.d(TAG, "parseUrl: "+aURL.getPath());
-        String[] splits = aURL.getPath().substring(1).split("/");
-        String app_token = splits[1];
-        String table_id = map.get("table");
-        Log.d(TAG,"parseUrl app_token: " + app_token);
-        Log.d(TAG,"parseUrl table_id: " + table_id);
-        save(SP_APP_TOKEN, app_token);
-        save(SP_TABLE_ID, table_id);
-        String tip = String.format("设置多维表成功 app_token[%s] table_id[%s]",app_token,table_id);
-        Toast toast1=Toast.makeText(MainActivity.this, tip, Toast.LENGTH_SHORT);
-        toast1.show();
+            Map<String, String> map = new HashMap<String, String>();
+            for (String param : params) {
+                String name = param.split("=")[0];
+                String value = param.split("=")[1];
+                map.put(name, value);
+            }
+
+            Log.d(TAG, "parseUrl: "+aURL.getPath());
+            String[] splits = aURL.getPath().substring(1).split("/");
+            String app_token = splits[1];
+            String table_id = map.get("table");
+            Log.d(TAG,"parseUrl app_token: " + app_token);
+            Log.d(TAG,"parseUrl table_id: " + table_id);
+            save(SP_APP_TOKEN, app_token);
+            save(SP_TABLE_ID, table_id);
+            String tip = String.format("设置多维表成功 app_token[%s] table_id[%s]",app_token,table_id);
+            Toast toast1=Toast.makeText(MainActivity.this, tip, Toast.LENGTH_SHORT);
+            toast1.show();
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
 
     private void save(String key, String value) {

@@ -28,12 +28,13 @@
             android:id="@+id/qr_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="20dp"
+            android:layout_margin="10dp"
+            android:padding="8dp"
+            android:background="@color/dataBackground"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             android:orientation="vertical">
         </androidx.recyclerview.widget.RecyclerView>
     </LinearLayout>
-
 
     <LinearLayout
         android:orientation="horizontal"

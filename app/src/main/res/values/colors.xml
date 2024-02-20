@@ -4,4 +4,5 @@
     <color name="colorPrimary">#033ED2</color>
     <color name="navigationBarColor">#06A9EF</color>
     <color name="colorPrimaryDarkTrans">#CC038AC4</color>
+    <color name="dataBackground">#35038AC4</color>
 </resources>

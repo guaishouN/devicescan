@@ -28,11 +28,12 @@ public class QrCodeDataAdapter extends RecyclerView.Adapter<QrCodeDataAdapter.In
         return new InnerHolder(view);
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull QrCodeDataAdapter.InnerHolder holder, int position) {
         QrCodeItem item = dataList.get(position);
         holder.setEditable(item.isEditable);
-        holder.keyView.setText(item.key);
+        holder.keyView.setText(item.key+": ");
         if(item.isEditable){
             holder.valueViewEditable.setText(item.value);
         }else {

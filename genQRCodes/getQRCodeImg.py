@@ -51,7 +51,11 @@ class PageConf:
 
     min_direction_pixels = 100
 
-
+@dataclass
+class MobileConf:
+    url = default_table_url
+    qr_code_data:tuple | None = None
+    editable:tuple | None = None
 
 def cm_to_pixels(cm, dpi=300):
     return int(cm * dpi / 2.54)
@@ -65,12 +69,12 @@ configure = configparser.ConfigParser()
 
 text_conf = TextConf()
 page_conf = PageConf()
-
+mobile_conf = MobileConf()
 
 def check_config_file():
     global configure, cl_qrcode, cl_text
     # 解析并读取配置文件feishu-config.ini
-    configure["多维表格地址"] = {'url': default_table_url}
+    configure["多维表格地址"] = {'链接地址': default_table_url}
     # 在config文件中加入注释"单位为cm"
     desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。可选常用颜色: white black green red blue yellow"
     configure["配置说明"] = {"说明": desc}
@@ -83,6 +87,7 @@ def check_config_file():
     }
     configure["颜色"] = {'二维码颜色': 'black', '文本颜色': 'black'}
     configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人')}
+    configure["扫码设置"] = {'可编辑字段': ('使用人',)}
     # 检查飞书配置文件  feishu-config.ini，如果不存在，则创建
     if not os.path.exists('./feishu-config.ini'):
         # utf-8 编码写入配置文件
@@ -100,7 +105,7 @@ def check_config_file():
     configure.set('SECRET', 'table_id', table_id)
 
     # 读取配置文件中的url, 如果没有，则使用默认值
-    loc_url = configure.get('多维表格地址', 'url', fallback=None)
+    loc_url = configure.get('多维表格地址', '链接地址', fallback=None)
     logging.info(f'feishu-config.ini url:{loc_url}')
     if not loc_url:
         loc_url = default_table_url
@@ -130,9 +135,9 @@ def check_config_file():
     logging.debug(f'feishu-config.ini desc:{desc}')
 
     # 读取配置文件中的字段
-    content_colum = configure.get('二维码内容字段', '字段', fallback=None)
-    st = ast.literal_eval(content_colum)
-    logging.debug(f'feishu-config.ini content_colum:{st}')
+    qr_d_str = configure.get('二维码内容字段', '字段', fallback=None)
+    qr_d = ast.literal_eval(qr_d_str)
+    logging.debug(f'feishu-config.ini content_colum:{qr_d}')
 
     # 读取配置文件中的文本显示
     left_str = configure.get('文本显示', '位置_左右', fallback=None)
@@ -163,6 +168,14 @@ def check_config_file():
     page_conf.label_size_pixels = (cm_to_pixels(label_size_cm[0]), cm_to_pixels(label_size_cm[1]))
 
     page_conf.min_direction_pixels = min(min(page_conf.label_size_pixels[0], page_conf.label_size_pixels[1]), 500)
+
+    # 扫码设置
+    mobile_conf.url = loc_url
+    mobile_conf.qr_code_data = qr_d
+    editable_str = configure.get('扫码设置', '可编辑字段', fallback=None)
+    editable = ast.literal_eval(editable_str)
+    mobile_conf.editable = editable
+    logging.debug(f'feishu-config.ini ed:{editable}  {type(editable)}')
 
     return True
 
@@ -389,6 +402,23 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
 def print_log(log_str):
     print(log_str)
     logging.info(log_str)
+    pass
+
+
+def gen_mobile_qrcode():
+    check_config_file()
+    mobile_qrcode_dict = dict()
+    mobile_qrcode_dict['url'] = mobile_conf.url
+    mobile_qrcode_dict['item'] = list(mobile_conf.qr_code_data)
+    mobile_qrcode_dict['editable'] = list(mobile_conf.editable)
+    setting_js = json.dumps(mobile_qrcode_dict, ensure_ascii=False)
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+    qr.add_data(setting_js)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color=cl_qrcode, back_color=bg_qrcode)
+    p = f"./mobile_settings_qrcode.png"
+    img.save(p)
+    os.system(f'start {p}')
     pass
 
 

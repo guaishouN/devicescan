@@ -3,7 +3,7 @@ from getQRCodeImg import *
 
 window = tk.Tk()
 window.title('设备管理标签打印')
-window.geometry('485x200')
+window.geometry('630x200')
 window.resizable(width=True, height=True)
 paned_window = tk.PanedWindow(window, orient=tk.VERTICAL)
 paned_window.pack(fill=tk.BOTH, expand=True)
@@ -36,10 +36,12 @@ tk.Button(frame_top, text='重置配置', font=("Microsoft YaHei", 10), width=12
     .grid(row=0, column=0, padx=2, pady=2)
 tk.Button(frame_top, text='编辑配置', font=("Microsoft YaHei", 10), width=12, height=1, command=edit_config_file) \
     .grid(row=0, column=1, padx=2, pady=2)
+tk.Button(frame_top, text='生成手机端配置二维码', font=("Microsoft YaHei", 10), width=16, height=1, command=gen_mobile_qrcode) \
+    .grid(row=0, column=2, padx=2, pady=2)
 tk.Button(frame_top, text='生成打印标签Word文档', bg='green', fg='white', font=("Microsoft YaHei", 10, "bold"),
           width=30, height=1,
           command=gen_label_doc) \
-    .grid(row=0, column=2, columnspan=10, padx=10, pady=10)
+    .grid(row=0, column=3, columnspan=10, padx=10, pady=10)
 
 # 下部分
 frame_bottom = tk.Frame(paned_window)
@@ -81,3 +83,10 @@ logger.addHandler(text_handler)
 logger.info('初始化化完成！')
 
 window.mainloop()
+
+if os.path.exists('./qrcodes'):
+    try:
+        os.rmdir('./qrcodes')
+    except Exception as e:
+        logging.info(f'####got exception:{e}')
+        pass

@@ -43,13 +43,14 @@ class PageConf:
 
     label_size_cm: tuple | None = None
     label_size_pixels: tuple | None = None
-    label_margin_pixels = 10
+    label_margin_pixels = 30
 
     content_size_cm: tuple | None = None
     content_size_pixels: tuple | None = None
     content_margin_pixels = 10
 
     min_direction_pixels = 100
+
 
 
 def cm_to_pixels(cm, dpi=300):
@@ -223,8 +224,13 @@ def insert_images_into_docx():
         print(f"cell_position = {cell_position}")
         image_path = os.path.join(folder_path, image_file)
         label = Image.open(image_path)
-        img.paste(label, (cell_position[1] * page_conf.label_size_pixels[0],
-                          cell_position[0] * page_conf.label_size_pixels[1]))
+        label_position = (cell_position[1] * page_conf.label_size_pixels[0],
+                          cell_position[0] * page_conf.label_size_pixels[1])
+        label_margin_size = (page_conf.label_size_pixels[0]-page_conf.label_margin_pixels,
+                             page_conf.label_size_pixels[1]-page_conf.label_margin_pixels)
+        label = label.resize(label_margin_size)
+        fix_position = (int(label_position[0]+page_conf.label_margin_pixels/2), int(label_position[1]+page_conf.label_margin_pixels/2))
+        img.paste(label, fix_position)
         cell_index += 1
     save_big_picture_to_docx(document, img)
 

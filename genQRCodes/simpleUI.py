@@ -16,12 +16,17 @@ var = tk.StringVar()
 is_Hidden = False
 
 
-def hidden_me():
+def edit_config_file():
+    os.system(r'start ./feishu-config.ini')
+    # 输出日志
+    logging.info('打开配置')
     pass
 
 
-def edit_config_file():
-    os.system(r'start ./feishu-config.ini')
+def gen_label_doc():
+    # 输出日志
+    logging.info('正常获取数据...')
+    do_main()
     pass
 
 
@@ -31,7 +36,7 @@ tk.Button(frame_top, text='编辑配置', font=("Microsoft YaHei", 10), width=12
     .grid(row=0, column=1, padx=2, pady=2)
 tk.Button(frame_top, text='生成打印标签Word文档', bg='green', fg='white', font=("Microsoft YaHei", 10, "bold"),
           width=30, height=1,
-          command=do_main) \
+          command=gen_label_doc) \
     .grid(row=0, column=2, columnspan=10, padx=10, pady=10)
 
 # 下部分

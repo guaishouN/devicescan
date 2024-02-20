@@ -136,7 +136,7 @@ def check_config_file():
 
     # 读取配置文件中的文本显示
     left_str = configure.get('文本显示', '位置_左右', fallback=None)
-    text_conf.left = left_str == "左"
+    text_conf.left = left_str == "右"
     content_colum = configure.get('文本显示', '字段', fallback=None)
     text_conf.items = ast.literal_eval(content_colum)
     font_size_str = configure.get('文本显示', '字体大小', fallback=None)
@@ -172,6 +172,7 @@ def reset_config_file():
         os.remove('./feishu-config.ini')
     configure.remove_section('SECRET')
     check_config_file()
+    logging.info('完成重置配置')
 
 
 def get_big_picture_draw() -> (Image, ImageDraw):
@@ -229,7 +230,8 @@ def insert_images_into_docx():
         label_margin_size = (page_conf.label_size_pixels[0]-page_conf.label_margin_pixels,
                              page_conf.label_size_pixels[1]-page_conf.label_margin_pixels)
         label = label.resize(label_margin_size)
-        fix_position = (int(label_position[0]+page_conf.label_margin_pixels/2), int(label_position[1]+page_conf.label_margin_pixels/2))
+        fix_position = (int(label_position[0]+page_conf.label_margin_pixels/2),
+                        int(label_position[1]+page_conf.label_margin_pixels/2))
         img.paste(label, fix_position)
         cell_index += 1
     save_big_picture_to_docx(document, img)
@@ -402,16 +404,18 @@ def do_main():
     if code1 == 0:
         code2, msg2, items = list_records(tenant_access_token_p=tenant_access_token, app_token_p=app_token_cf,
                                           table_id_p=table_id_cf)
-        logging.info(f'code2:{code2} records sizes:{len(items)}')
+        logging.info(f'获取到标签记录数量:{len(items)}')
+        i = 0
         if code2 == 0:
             for text_data, qr_data in simplify_records(items):
-                logging.info(f' text_data:{text_data}  qr_data:{qr_data}')
+                i = i+1
+                logging.info(f'第{i}个标签\n标签文本内容:{text_data}\n标签二维码内容:{qr_data}')
                 gen_qrcode_by_qr_data(text_data, qr_data)
             insert_images_into_docx()
-            logging.info(f'Suceessfully generated qrcodes and inserted into word, done!')
+            logging.info(f'导出标签打印文档成功!')
         else:
-            logging.info(f'list_records failed!!, code:{code2}')
+            logging.info(f'获取表格记录失败!!, code:{code2}')
     else:
-        logging.info(f'get_tenant_access_token failed!!, code:{code1}')
+        logging.info(f'被拒绝访问多维表格，请确认【多维表格权限配置是否正确】和【是否在允许的网络域内】!!, code:{code1}')
 
 # do_main()

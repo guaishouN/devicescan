@@ -4,7 +4,7 @@ from getQRCodeImg import *
 window = tk.Tk()
 window.title('设备管理标签打印')
 window.geometry('485x200')
-window.resizable(width=False, height=True)
+window.resizable(width=True, height=True)
 paned_window = tk.PanedWindow(window, orient=tk.VERTICAL)
 paned_window.pack(fill=tk.BOTH, expand=True)
 
@@ -17,6 +17,8 @@ is_Hidden = False
 
 
 def edit_config_file():
+    if not os.path.exists('./feishu-config.ini'):
+        reset_config_file()
     os.system(r'start ./feishu-config.ini')
     # 输出日志
     logging.info('打开配置')

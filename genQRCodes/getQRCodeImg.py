@@ -252,7 +252,8 @@ def insert_images_into_docx():
 
     time_str = time.strftime("打印%Y%m%d%H%M%S", time.localtime())
     document.save(f'./{time_str}.docx')
-
+    logging.info(f"当前文件夹 输出{time_str}.docx")
+    os.system(f'start ./{time_str}.docx')
 
 def get_tenant_access_token(app_id=None, app_secret=None, config_file=None):
     # 构建请求URL和请求头

@@ -23,7 +23,7 @@ cl_qrcode = 'black'
 cl_text = 'black'
 
 """log 以追加的形式打印到文件夹./qrcodes下"""
-logging.basicConfig(level=logging.DEBUG, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 @dataclass
@@ -91,7 +91,8 @@ def check_config_file():
         configure.read('feishu-config.ini', encoding='utf-8')
     paper_size = (21.0, 29.7)
     configure.set("打印纸张", 'page_size', str(paper_size))
-    configure.add_section('SECRET')
+    if not configure.has_section('SECRET'):
+        configure.add_section('SECRET')
     configure.set('SECRET', 'app_id', app_id)
     configure.set('SECRET', 'app_secret', app_secret)
     configure.set('SECRET', 'app_token', app_token)
@@ -163,6 +164,13 @@ def check_config_file():
     page_conf.min_direction_pixels = min(min(page_conf.label_size_pixels[0], page_conf.label_size_pixels[1]), 500)
 
     return True
+
+
+def reset_config_file():
+    if os.path.exists('./feishu-config.ini'):
+        os.remove('./feishu-config.ini')
+    configure.remove_section('SECRET')
+    check_config_file()
 
 
 def get_big_picture_draw() -> (Image, ImageDraw):
@@ -323,7 +331,7 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     qr_info = str()
     for key in _qr_data:
         qr_info = "".join([qr_info, key, ": ", _qr_data[key], '\n'])
-    logging.info(f'join _qr_data result {qr_info}')
+    # logging.info(f'join _qr_data result {qr_info}')
     qr.add_data(qr_info)
     qr.make(fit=True)
     img = qr.make_image(fill_color=cl_qrcode, back_color=bg_qrcode)
@@ -376,9 +384,12 @@ def print_log(log_str):
 
 
 def do_main():
+    """如果文件qrcodes目录不存在，则创建"""
+    if not os.path.exists('./qrcodes'):
+        os.makedirs('./qrcodes')
     check_config_file()
     code1, msg1, tenant_access_token = get_tenant_access_token(app_id=app_id, app_secret=app_secret)
-    logging.info(f'code1:{code1} tenant_access_token:{tenant_access_token}')
+    # logging.info(f'code1:{code1} tenant_access_token:{tenant_access_token}')
 
     app_token_cf = configure.get('SECRET', 'app_token')
     table_id_cf = configure.get('SECRET', 'table_id')

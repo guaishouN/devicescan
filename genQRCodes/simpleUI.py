@@ -20,10 +20,14 @@ def hidden_me():
     pass
 
 
+def edit_config_file():
+    os.system(r'start ./feishu-config.ini')
+    pass
 
-tk.Button(frame_top, text='重置配置', font=("Microsoft YaHei", 10), width=12, height=1, command=hidden_me) \
+
+tk.Button(frame_top, text='重置配置', font=("Microsoft YaHei", 10), width=12, height=1, command=reset_config_file) \
     .grid(row=0, column=0, padx=2, pady=2)
-tk.Button(frame_top, text='编辑配置', font=("Microsoft YaHei", 10), width=12, height=1, command=hidden_me) \
+tk.Button(frame_top, text='编辑配置', font=("Microsoft YaHei", 10), width=12, height=1, command=edit_config_file) \
     .grid(row=0, column=1, padx=2, pady=2)
 tk.Button(frame_top, text='生成打印标签Word文档', bg='green', fg='white', font=("Microsoft YaHei", 10, "bold"),
           width=30, height=1,
@@ -67,30 +71,6 @@ text_handler.setFormatter(formatter)
 logger.addHandler(text_handler)
 
 # 输出日志
-logger.debug('This is a debug message')
-logger.info('This is an info message')
-logger.warning('This is a warning message')
-logger.error('This is an error message')
-logger.critical('This is a critical message')
-logger.debug('This is a debug message')
-logger.info('This is an info message')
-logger.warning('This is a warning message')
-logger.error('This is an error message')
-logger.critical('This is a critical message')
-logger.debug('This is a debug message')
-logger.info('This is an info message')
-logger.warning('This is a warning message')
-logger.error('This is an error message')
-logger.critical('This is a critical message')
-logger.debug('This is a debug message')
-logger.info('This is an info message')
-logger.warning('This is a warning message')
-logger.error('This is an error message')
-logger.critical('This is a critical message')
-logger.debug('This is a debug message')
-logger.info('This is an info message')
-logger.warning('This is a warning message')
-logger.error('This is an error message')
-logger.critical('This is a critical message')
+logger.info('初始化化完成！')
 
 window.mainloop()

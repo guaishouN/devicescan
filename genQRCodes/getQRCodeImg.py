@@ -11,7 +11,7 @@ import logging
 import os
 import ast
 
-default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
+default_table_url = "https://yesv-desaysv.feishu.cn/base/SWjfbUvoha83L2slAIHctOrVnjh?table=tbluDDAbAZhrwgY8&view=vewsIt61jC"
 app_id = 'cli_a514aea9fa79900b'
 app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
 app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
@@ -23,7 +23,7 @@ cl_qrcode = 'black'
 cl_text = 'black'
 
 """log 以追加的形式打印到文件夹./qrcodes下"""
-logging.basicConfig(level=logging.INFO, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, filename='./run.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 @dataclass

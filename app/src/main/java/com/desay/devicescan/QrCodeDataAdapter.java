@@ -1,6 +1,9 @@
 package com.desay.devicescan;
 
 import android.annotation.SuppressLint;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.LinkedList;
 
 public class QrCodeDataAdapter extends RecyclerView.Adapter<QrCodeDataAdapter.InnerHolder>{
+    private static final String TAG = QrCodeDataAdapter.class.getSimpleName();
     private LinkedList<QrCodeItem> dataList;
     @SuppressLint("NotifyDataSetChanged")
     public void setData(LinkedList<QrCodeItem> dataList){
@@ -19,6 +23,10 @@ public class QrCodeDataAdapter extends RecyclerView.Adapter<QrCodeDataAdapter.In
             this.dataList = dataList;
         }
         notifyDataSetChanged();
+    }
+
+    public LinkedList<QrCodeItem> getDataList() {
+        return dataList;
     }
 
     @NonNull
@@ -31,7 +39,7 @@ public class QrCodeDataAdapter extends RecyclerView.Adapter<QrCodeDataAdapter.In
     @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull QrCodeDataAdapter.InnerHolder holder, int position) {
-        QrCodeItem item = dataList.get(position);
+        final QrCodeItem item = dataList.get(position);
         holder.setEditable(item.isEditable);
         holder.keyView.setText(item.key+": ");
         if(item.isEditable){
@@ -39,6 +47,23 @@ public class QrCodeDataAdapter extends RecyclerView.Adapter<QrCodeDataAdapter.In
         }else {
             holder.valueViewText.setText(item.value);
         }
+        holder.valueViewEditable.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                item.value = s.toString();
+                Log.d(TAG, "afterTextChanged: "+item);
+            }
+        });
     }
 
     @Override

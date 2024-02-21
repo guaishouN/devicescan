@@ -75,7 +75,7 @@
     </LinearLayout>
 
     <com.addisonelliott.segmentedbutton.SegmentedButtonGroup
-        android:id="@+id/buttonGroup_draggable"
+        android:id="@+id/state_segment_group"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="40dp"

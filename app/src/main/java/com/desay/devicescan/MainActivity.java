@@ -16,11 +16,18 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.addisonelliott.segmentedbutton.SegmentedButtonGroup;
 import com.google.gson.Gson;
+
+import java.math.BigDecimal;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Map;
 import java.util.List;
 import cn.bingoogolapple.qrcode.core.BGAQRCodeUtil;
@@ -44,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     private String app_token = "";
     private final QrCodeDataAdapter adapter = new QrCodeDataAdapter();
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private SegmentedButtonGroup useStatOptions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,8 +71,24 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         recyclerView = findViewById(R.id.qr_container);
         rawQrDataView = findViewById(R.id.raw_data);
         infoShowTx = findViewById(R.id.app_tip);
+        useStatOptions = findViewById(R.id.state_segment_group);
         recyclerView.setAdapter(adapter);
-        larkRequestManager.setInfoShow((msg, type) -> runOnUiThread(()-> MainActivity.this.infoShow(msg,type)));
+        larkRequestManager.setInfoShow(new LarkRequestManager.InfoShowListener() {
+            @Override
+            public void infoShow(String msg, int type) {
+                runOnUiThread(() -> MainActivity.this.infoShow(msg, type));
+            }
+
+            @Override
+            public void getNewestRecord(HashMap<String, Object> fields) {
+                try{
+                    runOnUiThread(() -> MainActivity.this.getNewestRecord(fields));
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+
+            }
+        });
         if(TextUtils.isEmpty(app_token)){
             infoShow("还没绑定多维表格到手机端, 请扫描配置二维码！",2);
         }
@@ -84,12 +108,22 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         }
 
         if(view.getId() == R.id.get_newest_record){
+            if(TextUtils.isEmpty(recordID)){
+                infoShow("还没有识别到数据记录，请先对标签二维码扫码识别",2);
+                return;
+            }
             infoShow("正在获取对应多维表最新记录....",1);
             larkRequestManager.getDataByRecordId(recordID);
             return;
         }
 
         String data = "";
+        LinkedList<QrCodeItem> dataList = adapter.getDataList();
+        dataList.forEach(qrCodeItem -> {
+            if("使用人".equals(qrCodeItem.key)){
+                userName = qrCodeItem.value;
+            }
+        });
         if (view.getId() == R.id.device_un) {
             data = String.format(LarkRequestManager.PREPARE_DEV, userName, timestamp);
         }
@@ -178,6 +212,50 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             cl = type==1?R.drawable.info_bg_warn :R.drawable.info_bg_error;
         }
         infoShowTx.setBackgroundResource(cl);
+    }
+
+    private void getNewestRecord(HashMap<String, Object> fields) {
+        if (fields!=null && !fields.isEmpty() && settingsBean!=null
+                && settingsBean.item!=null && !settingsBean.item.isEmpty()){
+            LinkedList<QrCodeItem> items = new LinkedList<>();
+            for (String key : settingsBean.item){
+                Object object = fields.get(key);
+                if (object!=null) {
+                    QrCodeItem item = new QrCodeItem();
+                    item.key = key;
+                    if(object instanceof String){
+                        item.value = (String)object;
+                    }else {
+                        item.value = object.toString();
+                        if (item.value.contains("E12")&&item.value.contains("1.")){
+                            BigDecimal bigDecimal = new BigDecimal(item.value);
+                            long result = bigDecimal.longValue();
+                            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd", Locale.CHINA);
+                            item.value = simpleDateFormat.format(new Date(result));
+                        }
+                    }
+                    if (settingsBean.editable.contains(key)) {
+                        item.isEditable = true;
+                    }
+                    items.add(item);
+                }
+            }
+            Object object = fields.get("使用状态");
+            if (object instanceof String) {
+                String useStat = (String)object;
+                if("未分配".equals(useStat)){
+                    useStatOptions.setPosition(0,true);
+                } else if("在使用".equals(useStat)){
+                    useStatOptions.setPosition(1,true);
+                } else if("已报废".equals(useStat)){
+                    useStatOptions.setPosition(2,true);
+                }
+            }
+
+            adapter.setData(items);
+            Log.d(TAG, "getNewestRecord: " + items);
+            infoShow("获取最新数据成功", 0);
+        }
     }
 
     @Override

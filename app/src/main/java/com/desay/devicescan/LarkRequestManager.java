@@ -225,7 +225,13 @@ public class LarkRequestManager {
                 if(baseResponseBean.code == 0){
                     infoShowListener.infoShow("获取最新数据记录成功", 0);
                     RecordDataResponseBean recordDataResponseBean = new Gson().fromJson(this.jsonData, RecordDataResponseBean.class);
-                    Log.d(TAG, "onResponse: "+recordDataResponseBean);
+                    Log.d(TAG, "onResponse get newest data: "+recordDataResponseBean);
+                    try {
+                        infoShowListener.getNewestRecord(recordDataResponseBean.data.record.fields);
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+
                 }else{
                     infoShowListener.infoShow("获取最新数据记录失败 code["+baseResponseBean.code+"]msg["+baseResponseBean.msg+"]", 2);
                 }
@@ -266,6 +272,7 @@ public class LarkRequestManager {
 
     public interface InfoShowListener{
         void infoShow(String msg, int type);
+        default void getNewestRecord(HashMap<String, Object> fields){};
     }
 
     public static class LarkCallBack implements Callback {
@@ -377,7 +384,7 @@ public class LarkRequestManager {
     }
 
     public class Record {
-        public RecordFields fields;
+        public HashMap<String, Object> fields;
         public String id;
         public String record_id;
 
@@ -387,50 +394,6 @@ public class LarkRequestManager {
                     "fields=" + fields +
                     ", id='" + id + '\'' +
                     ", record_id='" + record_id + '\'' +
-                    '}';
-        }
-    }
-
-    public class RecordFields{
-        @SerializedName("使用人")
-        public String user;
-
-        @SerializedName("使用状态")
-        public String status;
-
-        @SerializedName("勾选打印标签")
-        public boolean printLabel;
-
-        @SerializedName("录入日期")
-        public long entryDate;
-
-        @SerializedName("设备ID")
-        public String deviceId;
-
-        @SerializedName("设备名称")
-        public String deviceName;
-
-        @SerializedName("项目")
-        public String project;
-
-        @SerializedName("SW版本")
-        public String sw = "";
-
-        @SerializedName("HW版本")
-        public String hw = "";
-
-        @Override
-        public String toString() {
-            return "RecordFields{" +
-                    "user='" + user + '\'' +
-                    ", status='" + status + '\'' +
-                    ", printLabel=" + printLabel +
-                    ", entryDate=" + entryDate +
-                    ", deviceId='" + deviceId + '\'' +
-                    ", deviceName='" + deviceName + '\'' +
-                    ", project='" + project + '\'' +
-                    ", sw='" + sw + '\'' +
-                    ", hw='" + hw + '\'' +
                     '}';
         }
     }

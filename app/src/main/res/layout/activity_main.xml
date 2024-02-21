@@ -12,8 +12,10 @@
             android:id="@+id/app_tip"
             android:gravity="center"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@color/bga_adapter_line"
+            android:layout_height="40dp"
+            android:layout_margin="10dp"
+            android:padding="8dp"
+            android:background="@drawable/info_bg"
             android:textSize="16sp"
             android:layout_marginBottom="20dp"
             android:text="链接多维表成功"/>
@@ -24,23 +26,23 @@
             android:layout_height="wrap_content">
             <Button
                 android:id="@+id/scan_device_qrcode"
-                android:background="@drawable/selector_btn_orange"
+                android:background="@drawable/bt_bg"
                 android:textSize="20sp"
                 android:textColor="@android:color/white"
                 android:layout_width="wrap_content"
                 android:layout_weight="0.5"
-                android:layout_height="60dp"
+                android:layout_height="50dp"
                 android:layout_marginEnd="5dp"
                 android:onClick="onClick"
                 android:text="点击扫描二维码"/>
             <Button
-                android:background="@drawable/selector_btn_orange"
+                android:background="@drawable/bt_bg"
                 android:textSize="20sp"
                 android:textColor="@android:color/white"
                 android:layout_width="wrap_content"
                 android:layout_marginStart="5dp"
                 android:layout_weight="0.5"
-                android:layout_height="60dp"
+                android:layout_height="50dp"
                 android:text="获取最新记录"/>
         </LinearLayout>
 
@@ -65,55 +67,68 @@
                 android:layout_height="match_parent"
                 android:textSize="20sp"
                 android:gravity="center"
-                android:text="点击扫描二维码识别内容"/>
+                android:text="二维码内容显示区"/>
         </FrameLayout>
     </LinearLayout>
 
-    <LinearLayout
-        android:orientation="horizontal"
+    <com.addisonelliott.segmentedbutton.SegmentedButtonGroup
+        android:id="@+id/buttonGroup_draggable"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="40dp"
-        android:layout_gravity="center"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
-        <Button
+        android:padding="8dp"
+        android:layout_gravity="center"
+        android:background="@color/white"
+        app:borderColor="@color/black"
+        app:borderWidth="1dp"
+        app:draggable="true"
+        app:position="0"
+        app:radius="30dp"
+        app:rippleColor="@color/SlateGray"
+        app:selectedBackground="@color/colorPrimaryDarkTrans"
+        app:selectionAnimationDuration="200">
+
+        <com.addisonelliott.segmentedbutton.SegmentedButton
             android:id="@+id/device_un"
             android:onClick="onClick"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            android:textSize="20sp"
-            android:padding="20dp"
-            android:textColor="@android:color/white"
-            android:backgroundTint="@color/colorPrimaryDarkTrans"
-            android:textStyle="bold"
-            android:text="未分配"
-            />
-        <Button
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-light"
+            android:padding="8dp"
+            app:selectedTextColor="@color/white"
+            app:selectedTextStyle="bold"
+            app:text="未分配"
+            app:textColor="@color/SlateGray"
+            app:textSize="20sp" />
+
+        <com.addisonelliott.segmentedbutton.SegmentedButton
             android:id="@+id/device_in"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            android:textSize="20sp"
-            android:padding="20dp"
             android:onClick="onClick"
-            android:textColor="@android:color/white"
-            android:backgroundTint="@color/colorPrimaryDarkTrans"
-            android:textStyle="bold"
-            android:text="在使用"
-            />
-        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-light"
+            android:padding="8dp"
+            app:selectedTextColor="@color/white"
+            app:selectedTextStyle="bold"
+            app:text="在使用"
+            app:textColor="@color/SlateGray"
+            app:textSize="20sp" />
+
+        <com.addisonelliott.segmentedbutton.SegmentedButton
             android:id="@+id/device_delete"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="已报废"
-            android:padding="20dp"
-            android:textSize="20sp"
-            android:textStyle="bold"
             android:onClick="onClick"
-            android:textColor="@android:color/white"
-            android:backgroundTint="@android:color/holo_red_light"
-            />
-    </LinearLayout>
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-light"
+            android:padding="8dp"
+            app:selectedTextColor="@color/red_400"
+            app:selectedTextStyle="bold"
+            app:text="已报废"
+            app:textColor="@color/SlateGray"
+            app:textSize="20sp" />
+    </com.addisonelliott.segmentedbutton.SegmentedButtonGroup>
 </RelativeLayout>

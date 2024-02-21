@@ -76,6 +76,10 @@ public class LarkRequestManager {
             .connectTimeout(10, TimeUnit.SECONDS)
             .callTimeout(10, TimeUnit.SECONDS).build();
     private final static LarkRequestManager INS = new LarkRequestManager();
+    private InfoShowListener infoShowListener= (msg, type) -> {
+        Log.d(TAG, "null info show");
+    };
+
     private LarkRequestManager(){}
 
     public static LarkRequestManager getInstance() {
@@ -231,8 +235,16 @@ public class LarkRequestManager {
         call.enqueue(callBack);
     }
 
+    public void setInfoShow(InfoShowListener infoShowListener) {
+        this.infoShowListener = infoShowListener;
+    }
+
     private interface TenantAccessListener{
         void onGot(boolean isGot);
+    }
+
+    public interface InfoShowListener{
+        void infoShow(String msg, int type);
     }
 
     public static class LarkCallBack implements Callback {

@@ -5,4 +5,7 @@
     <color name="navigationBarColor">#06A9EF</color>
     <color name="colorPrimaryDarkTrans">#CC038AC4</color>
     <color name="dataBackground">#35038AC4</color>
+    <color name="infoColorNormal">#B2DFDB</color>
+    <color name="infoColorWarn">#FFECB3</color>
+    <color name="infoColorDanger">#FF8B83</color>
 </resources>

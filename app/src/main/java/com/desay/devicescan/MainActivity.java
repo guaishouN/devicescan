@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     private final Gson gson = new Gson();
     private SettingsBean settingsBean = null;
     private RecyclerView recyclerView;
-    private TextView rawQrDataView;
+    private TextView rawQrDataView, infoShowTx;
     private final QrCodeDataAdapter adapter = new QrCodeDataAdapter();
     @SuppressLint("HandlerLeak")
     private final Handler handler = new Handler() {
@@ -85,7 +85,14 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         BGAQRCodeUtil.setDebug(true);
         recyclerView = findViewById(R.id.qr_container);
         rawQrDataView = findViewById(R.id.raw_data);
+        infoShowTx = findViewById(R.id.app_tip);
         recyclerView.setAdapter(adapter);
+        larkRequestManager.setInfoShow(new LarkRequestManager.InfoShowListener(){
+            @Override
+            public void infoShow(String msg, int type) {
+                runOnUiThread(()->infoShow(msg,type));
+            }
+        });
     }
 
     @SuppressLint("DefaultLocale")
@@ -172,9 +179,13 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         }
     }
 
-
     public void infoShow(String msg, int type){
-
+        infoShowTx.setText(msg);
+        int cl = R.color.infoColorNormal;
+        if(type>0){
+            cl = type==1?R.color.infoColorWarn:R.color.infoColorDanger;
+        }
+        infoShowTx.setBackgroundResource(cl);
     }
 
     @Override

@@ -24,16 +24,29 @@
             android:layout_marginTop="20dp"
             android:layout_height="60dp"
             android:text="点击扫描二维码"/>
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/qr_container"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="380dp"
             android:layout_margin="10dp"
             android:padding="8dp"
-            android:background="@color/dataBackground"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            android:orientation="vertical">
-        </androidx.recyclerview.widget.RecyclerView>
+            android:background="@drawable/data_bg"
+            android:layout_gravity="center">
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/qr_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                android:orientation="vertical">
+            </androidx.recyclerview.widget.RecyclerView>
+            <TextView
+                android:id="@+id/raw_data"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:textSize="20sp"
+                android:gravity="center"
+                android:text="点击扫描二维码识别内容"/>
+        </FrameLayout>
     </LinearLayout>
 
     <LinearLayout

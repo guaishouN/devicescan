@@ -11,7 +11,9 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.List;
+
 import cn.bingoogolapple.qrcode.core.BGAQRCodeUtil;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
@@ -44,19 +47,20 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     private final Gson gson = new Gson();
     private SettingsBean settingsBean = null;
     private RecyclerView recyclerView;
+    private TextView rawQrDataView;
     private final QrCodeDataAdapter adapter = new QrCodeDataAdapter();
     @SuppressLint("HandlerLeak")
-    private final Handler handler = new Handler(){
+    private final Handler handler = new Handler() {
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
-            switch (msg.what){
+            switch (msg.what) {
                 case LarkRequestManager.OK:
-                    Toast toast=Toast.makeText(MainActivity.this, "设置成功", Toast.LENGTH_SHORT);
+                    Toast toast = Toast.makeText(MainActivity.this, "设置成功", Toast.LENGTH_SHORT);
                     toast.show();
                     break;
                 case LarkRequestManager.ERROR:
-                    Toast toast1=Toast.makeText(MainActivity.this, "设置失败", Toast.LENGTH_SHORT);
+                    Toast toast1 = Toast.makeText(MainActivity.this, "设置失败", Toast.LENGTH_SHORT);
                     toast1.show();
                     break;
             }
@@ -70,81 +74,97 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         larkRequestManager = LarkRequestManager.getInstance();
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         String settingsStr = get(SP_SETTINGS_STR, null);
-        if(!TextUtils.isEmpty(settingsStr)){
+        if (!TextUtils.isEmpty(settingsStr)) {
             Log.d(TAG, "onCreate: to parser settings");
             parseQrSettingData(settingsStr);
         }
-        larkRequestManager.setAppTokenAndTableId(get(SP_APP_TOKEN,null),get(SP_TABLE_ID, null));;
+        larkRequestManager.setAppTokenAndTableId(get(SP_APP_TOKEN, null), get(SP_TABLE_ID, null));
+        ;
         larkRequestManager.setHandler(handler);
         larkRequestManager.getTenantAccessToken(null);
         BGAQRCodeUtil.setDebug(true);
         recyclerView = findViewById(R.id.qr_container);
+        rawQrDataView = findViewById(R.id.raw_data);
         recyclerView.setAdapter(adapter);
     }
 
     @SuppressLint("DefaultLocale")
-    public void onClick(View view){
+    public void onClick(View view) {
         timestamp = System.currentTimeMillis();
         //userName = User.getText().toString();
-        if (view.getId() == R.id.scan_device_qrcode){
-            startActivityForResult(new Intent(this, DeviceScanActivity.class),100);
+        if (view.getId() == R.id.scan_device_qrcode) {
+            startActivityForResult(new Intent(this, DeviceScanActivity.class), 100);
         }
         String data = "";
-        if (view.getId() == R.id.device_un){
+        if (view.getId() == R.id.device_un) {
             data = String.format(LarkRequestManager.PREPARE_DEV, userName, timestamp);
         }
-        if (view.getId() == R.id.device_in){
+        if (view.getId() == R.id.device_in) {
             data = String.format(LarkRequestManager.ACTIVE_DEV, userName, timestamp);
         }
-        if (view.getId() == R.id.device_delete){
+        if (view.getId() == R.id.device_delete) {
             data = String.format(LarkRequestManager.DELTE_DEV, userName, timestamp);
         }
-        Log.d(TAG, "onClick: data= "+data);
-        if(!TextUtils.isEmpty(data)){
-            larkRequestManager.updateRecord(data,recordID);
+        Log.d(TAG, "onClick: data= " + data);
+        if (!TextUtils.isEmpty(data)) {
+            larkRequestManager.updateRecord(data, recordID);
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(resultCode == 100 && requestCode == 100 && data != null){
-            String resultString  = data.getStringExtra("scanResult");
-            Log.d(TAG, "onActivityResult: "+resultString);
+        if (resultCode == 100 && requestCode == 100 && data != null) {
+            String resultString = data.getStringExtra("scanResult");
+            Log.d(TAG, "onActivityResult: " + resultString);
             try {
-                if(!TextUtils.isEmpty(resultString) && !parseQrSettingData(resultString) ){
-                    String[] lines = resultString.split("\n");
-                    Log.d(TAG, "onActivityResult: "+ Arrays.toString(lines));
-                    Map<String, String> map = new HashMap<>();
-                    for (String line : lines) {
-                        String[] parts = line.split(":");
-                        if (parts.length == 2) {
-                            map.put(parts[0], parts[1]);
+                rawQrDataView.setVisibility(View.GONE);
+                recyclerView.setVisibility(View.VISIBLE);
+                if (!TextUtils.isEmpty(resultString) && !parseQrSettingData(resultString)) {
+                    if (resultString.contains("Uid") && resultString.contains(": ")) {
+                        recyclerView.setVisibility(View.VISIBLE);
+                        String[] lines = resultString.split("\n");
+                        Log.d(TAG, "onActivityResult: " + Arrays.toString(lines));
+                        Map<String, String> map = new HashMap<>();
+                        for (String line : lines) {
+                            String[] parts = line.split(": ");
+                            if (parts.length == 2) {
+                                map.put(parts[0], parts[1]);
+                            }
                         }
-                    }
-                    //{Uid=recu1vmufbQ8PR, User=张勇, Dev=Google Pixel 5, Proj=12.3" AVX, TAM, DevId=SZ00000015, Date=20240111}
-                    if(map.get("Uid")!=null){
-                        recordID = map.get("Uid");
-                    }
-                    if(map.get("使用人")!=null){
-                        userName = map.get("User");
-                    }
+                        //{Uid=recu1vmufbQ8PR, User=张勇, Dev=Google Pixel 5, Proj=12.3" AVX, TAM, DevId=SZ00000015, Date=20240111}
+                        if (map.get("Uid") != null) {
+                            recordID = map.get("Uid");
+                            if (recordID != null) {
+                                recordID = recordID.trim();
+                            }
+                        }
+                        if (map.get("使用人") != null) {
+                            userName = map.get("User");
+                        }
 
-                    LinkedList<QrCodeItem> items = new LinkedList<>();
-                    for (String key: map.keySet()) {
-                        if ("Uid".equals(key)){
-                            continue;
+                        LinkedList<QrCodeItem> items = new LinkedList<>();
+                        for (String key : map.keySet()) {
+                            if ("Uid".equals(key)) {
+                                continue;
+                            }
+                            QrCodeItem item = new QrCodeItem();
+                            item.key = key;
+                            item.value = map.get(key);
+                            if (settingsBean.editable.contains(key)) {
+                                item.isEditable = true;
+                            }
+                            items.add(item);
                         }
-                        QrCodeItem item = new QrCodeItem();
-                        item.key = key;
-                        item.value = map.get(key);
-                        if (settingsBean.editable.contains(key)){
-                            item.isEditable = true;
+                        adapter.setData(items);
+                        Log.d(TAG, "onActivityResult: " + map);
+                    } else {
+                        recyclerView.setVisibility(View.GONE);
+                        rawQrDataView.setVisibility(View.VISIBLE);
+                        if (!TextUtils.isEmpty(resultString)) {
+                            rawQrDataView.setText(resultString);
                         }
-                        items.add(item);
                     }
-                    adapter.setData(items);
-                    Log.d(TAG, "onActivityResult: "+map);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -152,6 +172,10 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         }
     }
 
+
+    public void infoShow(String msg, int type){
+
+    }
 
     @Override
     protected void onStart() {
@@ -193,15 +217,15 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         larkRequestManager.setHandler(null);
     }
 
-    public boolean parseQrSettingData(String resultString){
+    public boolean parseQrSettingData(String resultString) {
         //String url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC";
-        if(TextUtils.isEmpty(resultString)){
+        if (TextUtils.isEmpty(resultString)) {
             Log.d(TAG, "parseQrSettingData: error empty resultString");
             return false;
         }
-        try{
+        try {
             settingsBean = gson.fromJson(resultString, SettingsBean.class);
-            Log.d(TAG, "parseQrSettingData: "+settingsBean);
+            Log.d(TAG, "parseQrSettingData: " + settingsBean);
             URL aURL = new URL(settingsBean.url);
             String query = aURL.getQuery();
             String[] params = query.split("&");
@@ -213,19 +237,19 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 map.put(name, value);
             }
 
-            Log.d(TAG, "parseUrl: "+aURL.getPath());
+            Log.d(TAG, "parseUrl: " + aURL.getPath());
             String[] splits = aURL.getPath().substring(1).split("/");
             String app_token = splits[1];
             String table_id = map.get("table");
-            Log.d(TAG,"parseUrl app_token: " + app_token);
-            Log.d(TAG,"parseUrl table_id: " + table_id);
+            Log.d(TAG, "parseUrl app_token: " + app_token);
+            Log.d(TAG, "parseUrl table_id: " + table_id);
             save(SP_APP_TOKEN, app_token);
             save(SP_TABLE_ID, table_id);
-            String tip = String.format("设置多维表成功 app_token[%s] table_id[%s]",app_token, table_id);
-            Toast toast1=Toast.makeText(MainActivity.this, tip, Toast.LENGTH_SHORT);
+            String tip = String.format("设置多维表成功 app_token[%s] table_id[%s]", app_token, table_id);
+            Toast toast1 = Toast.makeText(MainActivity.this, tip, Toast.LENGTH_SHORT);
             toast1.show();
             save(SP_SETTINGS_STR, resultString);
-        }catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
         return true;

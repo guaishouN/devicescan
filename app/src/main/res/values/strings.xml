@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">DeviceScan</string>
+    <string name="app_name">SV设备资产管理</string>
     <string name="tool_bar_title_main">设备管理</string>
     <string name="tool_bar_title_scan">设备二维码扫描</string>
 </resources>

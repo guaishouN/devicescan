@@ -59,20 +59,22 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         setContentView(R.layout.activity_main);
         larkRequestManager = LarkRequestManager.getInstance();
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-        String settingsStr = get(SP_SETTINGS_STR, null);
-        if (!TextUtils.isEmpty(settingsStr)) {
-            Log.d(TAG, "onCreate: to parser settings");
-            parseQrSettingData(settingsStr);
-        }
-        larkRequestManager.setAppTokenAndTableId(get(SP_APP_TOKEN, null), get(SP_TABLE_ID, null));
-        larkRequestManager.setHandler(handler);
-        larkRequestManager.getTenantAccessToken(null);
-        BGAQRCodeUtil.setDebug(true);
         recyclerView = findViewById(R.id.qr_container);
         rawQrDataView = findViewById(R.id.raw_data);
         infoShowTx = findViewById(R.id.app_tip);
         useStatOptions = findViewById(R.id.state_segment_group);
         recyclerView.setAdapter(adapter);
+        String settingsStr = get(SP_SETTINGS_STR, null);
+        if (!TextUtils.isEmpty(settingsStr)) {
+            Log.d(TAG, "onCreate: to parser settings");
+            parseQrSettingData(settingsStr);
+            larkRequestManager.getTenantAccessToken(null);
+        }else{
+            infoShow("请先扫码配置多维表格链接，二维码从设备管理标签生成器生成", 1);
+        }
+        larkRequestManager.setAppTokenAndTableId(get(SP_APP_TOKEN, null), get(SP_TABLE_ID, null));
+        larkRequestManager.setHandler(handler);
+        BGAQRCodeUtil.setDebug(true);
         larkRequestManager.setInfoShow(new LarkRequestManager.InfoShowListener() {
             @Override
             public void infoShow(String msg, int type) {
@@ -116,27 +118,35 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             larkRequestManager.getDataByRecordId(recordID);
             return;
         }
-
-        String data = "";
-        LinkedList<QrCodeItem> dataList = adapter.getDataList();
-        dataList.forEach(qrCodeItem -> {
-            if("使用人".equals(qrCodeItem.key)){
-                userName = qrCodeItem.value;
+        try{
+            String data = "";
+            LinkedList<QrCodeItem> dataList = adapter.getDataList();
+            if (dataList==null || dataList.isEmpty()){
+                infoShow("没有数据, 不处理", 1);
+                return;
             }
-        });
-        if (view.getId() == R.id.device_un) {
-            data = String.format(LarkRequestManager.PREPARE_DEV, userName, timestamp);
-        }
-        if (view.getId() == R.id.device_in) {
-            data = String.format(LarkRequestManager.ACTIVE_DEV, userName, timestamp);
-        }
-        if (view.getId() == R.id.device_delete) {
-            data = String.format(LarkRequestManager.DELTE_DEV, userName, timestamp);
-        }
-        Log.d(TAG, "onClick: data= " + data);
-        if (!TextUtils.isEmpty(data)) {
-            infoShow("正在发送数据到多维表....", 1);
-            larkRequestManager.updateRecord(data, recordID);
+            dataList.forEach(qrCodeItem -> {
+                if("使用人".equals(qrCodeItem.key)){
+                    userName = qrCodeItem.value;
+                }
+            });
+            if (view.getId() == R.id.device_un) {
+                data = String.format(LarkRequestManager.PREPARE_DEV, userName, timestamp);
+            }
+            if (view.getId() == R.id.device_in) {
+                data = String.format(LarkRequestManager.ACTIVE_DEV, userName, timestamp);
+            }
+            if (view.getId() == R.id.device_delete) {
+                data = String.format(LarkRequestManager.DELTE_DEV, userName, timestamp);
+            }
+            Log.d(TAG, "onClick: data= " + data);
+            if (!TextUtils.isEmpty(data)) {
+                infoShow("正在发送数据到多维表....", 1);
+                larkRequestManager.updateRecord(data, recordID);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            infoShow("设置出现错误 "+e.getMessage(), 2);
         }
     }
 
@@ -271,6 +281,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
     @Override
     public void onPermissionsGranted(int requestCode, List<String> perms) {
+        infoShow("已授权", 0);
     }
 
     @Override
@@ -313,7 +324,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             String query = aURL.getQuery();
             String[] params = query.split("&");
 
-            Map<String, String> map = new HashMap<String, String>();
+            Map<String, String> map = new HashMap<>();
             for (String param : params) {
                 String name = param.split("=")[0];
                 String value = param.split("=")[1];

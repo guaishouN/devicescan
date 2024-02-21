@@ -47,8 +47,6 @@ import okhttp3.ResponseBody;
  */
 public class LarkRequestManager {
     public static final String TAG  = LarkRequestManager.class.getSimpleName();
-    public static final int OK  = 0;
-    public static final int ERROR  = 1;
     public static final Object TENANT_JOB = new Object();
     public static final Object UPDATE_JOB =  new Object();
     public static final String TERNANT_TOKEN_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal";
@@ -118,7 +116,7 @@ public class LarkRequestManager {
                 if(listener!=null){
                     listener.onGot(false);
                 }
-                getHandler().sendEmptyMessage(1);
+                infoShowListener.infoShow("链接多维表格失败[网络请求失败]", 2);
             }
 
             @Override
@@ -127,6 +125,7 @@ public class LarkRequestManager {
                 TenantAccessTokenBean tenantAccessTokenBean = new Gson().fromJson(this.jsonData, TenantAccessTokenBean.class);
                 Log.d(TAG, "getTenantAccessToken 200: "+tenantAccessTokenBean);
                 if (tenantAccessTokenBean!=null && tenantAccessTokenBean.code==0){
+                    infoShowListener.infoShow("链接多维表成功", 0);
                     tenantAccessToken = tenantAccessTokenBean.tenant_access_token;
                     if(tenantAccessTokenBean.expire<1800){
                         handler.postDelayed(()->getTenantAccessToken(null), TENANT_JOB,60*1000);
@@ -138,6 +137,7 @@ public class LarkRequestManager {
                     }
                 }else{
                     Log.d(TAG, "onResponse failed by code: "+tenantAccessTokenBean);
+                    infoShowListener.infoShow("链接多维表失败, 请确认网络为公司内网并且已给‘设备管理’机器人添加多维表格权限", 2);
                 }
             }
         }, false);
@@ -157,15 +157,13 @@ public class LarkRequestManager {
 
     private void _updateRecord(final String stateStr,  final String recordId){
         if(TextUtils.isEmpty(tenantAccessToken)){
-            getHandler().sendEmptyMessage(1);
+            infoShowListener.infoShow("多维表格未链接，正在尝试...", 2);
             Log.d(TAG, "_updateRecord: tenantAccessToken is empty!!");
-            getTenantAccessToken(new TenantAccessListener() {
-                @Override
-                public void onGot(boolean isGot) {
-                    Log.d(TAG, "updateRecord onGot: [" + isGot + "]");
-                    if(isGot){
-                        _updateRecord(stateStr, recordId);
-                    }
+            getTenantAccessToken(isGot -> {
+                Log.d(TAG, "updateRecord onGot: [" + isGot + "]");
+                if(isGot){
+                    infoShowListener.infoShow("多维表格链接成功，正在尝试更新数据...", 1);
+                    _updateRecord(stateStr, recordId);
                 }
             });
             return;
@@ -173,26 +171,34 @@ public class LarkRequestManager {
         Log.d(TAG, "_updateRecord: tenantAccessToken is Ok!");
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", "Bearer "+tenantAccessToken);
-        String bodyData = stateStr;
         String UPDATE_RECORD_URL = String.format(UPDATE_RECORD_URL_BASE, appToken, tableId, recordId);
-        doRequest(UPDATE_RECORD_URL, headers, bodyData, new LarkCallBack(){
+        doRequest(UPDATE_RECORD_URL, headers, stateStr, new LarkCallBack(){
             public void onFailure(@NotNull Call call, @Nullable IOException e) {
                 super.onFailure(call, e);
                 Log.d(TAG, "update Record failed: "+this.jsonData);
-                getHandler().sendEmptyMessage(1);
+                infoShowListener.infoShow("设置数据失败", 2);
             }
             @Override
             public void onResponse(@NotNull Call call, @Nullable Response response) throws IOException {
                 super.onResponse(call, response);
                 Log.d(TAG, "update Record Sucessed: "+this.jsonData);
-                getHandler().sendEmptyMessage(0);
+                infoShowListener.infoShow("设置数据成功", 0);
             }
         }, true);
     }
 
-    public void getDataByRecordId(String recordId){
+    public void getDataByRecordId(final String recordId){
         if(TextUtils.isEmpty(tenantAccessToken)){
             Log.d(TAG, "_updateRecord: tenantAccessToken is empty!!");
+            infoShowListener.infoShow("多维表格未链接，正在尝试...", 2);
+            Log.d(TAG, "_updateRecord: tenantAccessToken is empty!!");
+            getTenantAccessToken(isGot -> {
+                Log.d(TAG, "updateRecord onGot: [" + isGot + "]");
+                if(isGot){
+                    infoShowListener.infoShow("多维表格链接成功，正在尝试同步最新记录数据...", 1);
+                    getDataByRecordId(recordId);
+                }
+            });
             return;
         }
         Log.d(TAG, "_updateRecord: tenantAccessToken is Ok!");
@@ -203,13 +209,13 @@ public class LarkRequestManager {
             public void onFailure(@NotNull Call call, @Nullable IOException e) {
                 super.onFailure(call, e);
                 Log.d(TAG, "update Record failed: "+this.jsonData);
-                getHandler().sendEmptyMessage(1);
+                infoShowListener.infoShow("获取最新数据记录失败", 2);
             }
             @Override
             public void onResponse(@NotNull Call call, @Nullable Response response) throws IOException {
                 super.onResponse(call, response);
                 Log.d(TAG, "update Record Sucessed: "+this.jsonData);
-                getHandler().sendEmptyMessage(0);
+                infoShowListener.infoShow("获取最新数据记录成功", 0);
             }
         }, true);
     }

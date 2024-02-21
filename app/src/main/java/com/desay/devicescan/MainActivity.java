@@ -6,29 +6,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
-import android.os.Message;
+import android.os.Looper;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.gson.Gson;
-
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.List;
-
 import cn.bingoogolapple.qrcode.core.BGAQRCodeUtil;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
@@ -49,23 +44,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     private RecyclerView recyclerView;
     private TextView rawQrDataView, infoShowTx;
     private final QrCodeDataAdapter adapter = new QrCodeDataAdapter();
-    @SuppressLint("HandlerLeak")
-    private final Handler handler = new Handler() {
-        @Override
-        public void handleMessage(@NonNull Message msg) {
-            super.handleMessage(msg);
-            switch (msg.what) {
-                case LarkRequestManager.OK:
-                    Toast toast = Toast.makeText(MainActivity.this, "设置成功", Toast.LENGTH_SHORT);
-                    toast.show();
-                    break;
-                case LarkRequestManager.ERROR:
-                    Toast toast1 = Toast.makeText(MainActivity.this, "设置失败", Toast.LENGTH_SHORT);
-                    toast1.show();
-                    break;
-            }
-        }
-    };
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,7 +69,9 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         larkRequestManager.setInfoShow(new LarkRequestManager.InfoShowListener(){
             @Override
             public void infoShow(String msg, int type) {
-                runOnUiThread(()->infoShow(msg,type));
+                runOnUiThread(()->{
+                    MainActivity.this.infoShow(msg,type);
+                });
             }
         });
     }
@@ -124,9 +105,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         if (resultCode == 100 && requestCode == 100 && data != null) {
             String resultString = data.getStringExtra("scanResult");
             Log.d(TAG, "onActivityResult: " + resultString);
+            infoShow("完成扫码", 1);
             try {
                 rawQrDataView.setVisibility(View.GONE);
                 recyclerView.setVisibility(View.VISIBLE);
+
                 if (!TextUtils.isEmpty(resultString) && !parseQrSettingData(resultString)) {
                     if (resultString.contains("Uid") && resultString.contains(": ")) {
                         recyclerView.setVisibility(View.VISIBLE);
@@ -165,11 +148,13 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                         }
                         adapter.setData(items);
                         Log.d(TAG, "onActivityResult: " + map);
+                        infoShow("识别成功", 0);
                     } else {
                         recyclerView.setVisibility(View.GONE);
                         rawQrDataView.setVisibility(View.VISIBLE);
                         if (!TextUtils.isEmpty(resultString)) {
                             rawQrDataView.setText(resultString);
+                            infoShow("识别成功", 1);
                         }
                     }
                 }
@@ -256,9 +241,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             Log.d(TAG, "parseUrl table_id: " + table_id);
             save(SP_APP_TOKEN, app_token);
             save(SP_TABLE_ID, table_id);
-            String tip = String.format("设置多维表成功 app_token[%s] table_id[%s]", app_token, table_id);
-            Toast toast1 = Toast.makeText(MainActivity.this, tip, Toast.LENGTH_SHORT);
-            toast1.show();
+            infoShow("已更新扫码配置", 0);
             save(SP_SETTINGS_STR, resultString);
         } catch (Exception e) {
             return false;

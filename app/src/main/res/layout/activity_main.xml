@@ -12,18 +12,38 @@
             android:id="@+id/app_tip"
             android:gravity="center"
             android:layout_width="match_parent"
-            android:layout_height="30dp"
+            android:layout_height="50dp"
             android:background="@color/bga_adapter_line"
-            android:textSize="12sp"
+            android:textSize="16sp"
             android:layout_marginBottom="20dp"
             android:text="链接多维表成功"/>
-        <TextView
-            android:id="@+id/scan_device_qrcode"
-            style="@style/MatchWrapTv"
-            android:textSize="20sp"
-            android:layout_marginTop="20dp"
-            android:layout_height="60dp"
-            android:text="点击扫描二维码"/>
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_margin="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button
+                android:id="@+id/scan_device_qrcode"
+                android:background="@drawable/selector_btn_orange"
+                android:textSize="20sp"
+                android:textColor="@android:color/white"
+                android:layout_width="wrap_content"
+                android:layout_weight="0.5"
+                android:layout_height="60dp"
+                android:layout_marginEnd="5dp"
+                android:onClick="onClick"
+                android:text="点击扫描二维码"/>
+            <Button
+                android:background="@drawable/selector_btn_orange"
+                android:textSize="20sp"
+                android:textColor="@android:color/white"
+                android:layout_width="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_weight="0.5"
+                android:layout_height="60dp"
+                android:text="获取最新记录"/>
+        </LinearLayout>
+
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

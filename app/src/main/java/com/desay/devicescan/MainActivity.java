@@ -12,7 +12,6 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -95,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         }
         Log.d(TAG, "onClick: data= " + data);
         if (!TextUtils.isEmpty(data)) {
+            infoShow("正在发送数据到多维表....", 1);
             larkRequestManager.updateRecord(data, recordID);
         }
     }
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                             }
                         }
                         if (map.get("使用人") != null) {
-                            userName = map.get("User");
+                            userName = map.get("使用人");
                         }
 
                         LinkedList<QrCodeItem> items = new LinkedList<>();
@@ -190,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
     @Override
     public void onPermissionsDenied(int requestCode, List<String> perms) {
+        infoShow("没有网络权限或相机散光灯的权限", 2);
     }
 
     @AfterPermissionGranted(REQUEST_CODE_QRCODE_PERMISSIONS)
@@ -202,7 +203,8 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 Manifest.permission.ACCESS_NETWORK_STATE,
         };
         if (!EasyPermissions.hasPermissions(this, perms)) {
-            EasyPermissions.requestPermissions(this, "扫描二维码需要打开相机和散光灯的权限", REQUEST_CODE_QRCODE_PERMISSIONS, perms);
+            EasyPermissions.requestPermissions(this, "扫描二维码需要网络权限或打开相机和散光灯的权限", REQUEST_CODE_QRCODE_PERMISSIONS, perms);
+            infoShow("没有网络权限或相机散光灯的权限", 2);
         }
     }
 

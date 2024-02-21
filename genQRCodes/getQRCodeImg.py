@@ -11,7 +11,7 @@ import logging
 import os
 import ast
 
-default_table_url = "https://yesv-desaysv.feishu.cn/base/SWjfbUvoha83L2slAIHctOrVnjh?table=tbluDDAbAZhrwgY8&view=vewsIt61jC"
+default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
 app_id = 'cli_a514aea9fa79900b'
 app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
 app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
@@ -81,12 +81,12 @@ def check_config_file():
     configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
     configure["标签"] = {'标签行列': (7, 3)}
     configure["文本显示"] = {
-        '字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人', 'SW版本', 'HW版本'),
+        '字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人'),
         '字体大小': 30,
         '位置_左右': '左'
     }
     configure["颜色"] = {'二维码颜色': 'black', '文本颜色': 'black'}
-    configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人', 'SW版本', 'HW版本')}
+    configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人')}
     configure["扫码设置"] = {'可编辑字段': ('使用人',)}
     # 检查飞书配置文件  feishu-config.ini，如果不存在，则创建
     if not os.path.exists('./feishu-config.ini'):

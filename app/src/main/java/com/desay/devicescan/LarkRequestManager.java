@@ -47,6 +47,9 @@ import okhttp3.ResponseBody;
  */
 public class LarkRequestManager {
     public static final String TAG  = LarkRequestManager.class.getSimpleName();
+    private final static int METHOD_GET = 0;
+    private final static int METHOD_PUT = 1;
+    private final static int METHOD_POST = 2;
     public static final Object TENANT_JOB = new Object();
     public static final Object UPDATE_JOB =  new Object();
     public static final String TERNANT_TOKEN_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal";
@@ -64,8 +67,7 @@ public class LarkRequestManager {
     private static final AtomicBoolean IS_BUSY = new AtomicBoolean(false);
     //public static final String UPDATE_RECORD_URL = "https://open.feishu.cn/open-apis/bitable/v1/apps/:app_token/tables/:table_id/records/:record_id";
     public static final String UPDATE_RECORD_URL_BASE = "https://open.feishu.cn/open-apis/bitable/v1/apps/%s/tables/%s/records/%s";
-    //public static final String GET_BY_RECORDID_URL_BASE = "https://open.feishu.cn/open-apis/bitable/v1/apps/%s/tables/%s/records/%s";
-    public static final String GET_BY_RECORDID_URL_BASE = "https://open.feishu.cn/open-apis/bitable/v1/apps/CmHmb4MxPaEW7zsWB07c1hCUnhd/tables/tbl3OBzMMqjX79gN/records/recu25skfs5Blp";
+    public static final String GET_BY_RECORDID_URL_BASE = "https://open.feishu.cn/open-apis/bitable/v1/apps/%s/tables/%s/records/%s";
     public String tenantAccessToken = "";
     public Handler handler = new Handler(Looper.getMainLooper());
     public final OkHttpClient client = new OkHttpClient.Builder()
@@ -137,10 +139,11 @@ public class LarkRequestManager {
                     }
                 }else{
                     Log.d(TAG, "onResponse failed by code: "+tenantAccessTokenBean);
-                    infoShowListener.infoShow("链接多维表失败, 请确认网络为公司内网并且已给‘设备管理’机器人添加多维表格权限", 2);
+                    infoShowListener.infoShow("链接多维表失败, 请确认网络为公司内网并且已给‘设备管理’机器人添加多维表格权限, " +
+                            "code["+baseResponseBean.code+"]msg["+baseResponseBean.msg+"]", 2);
                 }
             }
-        }, false);
+        }, METHOD_POST);
     }
     
     public void updateRecord(final String stateStr, final String recordId){
@@ -182,18 +185,22 @@ public class LarkRequestManager {
             public void onResponse(@NotNull Call call, @Nullable Response response) throws IOException {
                 super.onResponse(call, response);
                 Log.d(TAG, "update Record Sucessed: "+this.jsonData);
-                infoShowListener.infoShow("设置数据成功", 0);
+                if(baseResponseBean.code == 0){
+                    infoShowListener.infoShow("设置数据成功", 0);
+                }else{
+                    infoShowListener.infoShow("设置数据失败 code["+baseResponseBean.code+"]msg["+baseResponseBean.msg+"]", 2);
+                }
             }
-        }, true);
+        }, METHOD_PUT);
     }
 
     public void getDataByRecordId(final String recordId){
         if(TextUtils.isEmpty(tenantAccessToken)){
-            Log.d(TAG, "_updateRecord: tenantAccessToken is empty!!");
+            Log.d(TAG, "getDataByRecordId: tenantAccessToken is empty!!");
             infoShowListener.infoShow("多维表格未链接，正在尝试...", 2);
-            Log.d(TAG, "_updateRecord: tenantAccessToken is empty!!");
+            Log.d(TAG, "getDataByRecordId: tenantAccessToken is empty!!");
             getTenantAccessToken(isGot -> {
-                Log.d(TAG, "updateRecord onGot: [" + isGot + "]");
+                Log.d(TAG, "getDataByRecordId onGot: [" + isGot + "]");
                 if(isGot){
                     infoShowListener.infoShow("多维表格链接成功，正在尝试同步最新记录数据...", 1);
                     getDataByRecordId(recordId);
@@ -201,26 +208,32 @@ public class LarkRequestManager {
             });
             return;
         }
-        Log.d(TAG, "_updateRecord: tenantAccessToken is Ok!");
+        Log.d(TAG, "getDataByRecordId: tenantAccessToken is Ok!");
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", "Bearer "+tenantAccessToken);
-        String UPDATE_RECORD_URL = String.format(UPDATE_RECORD_URL_BASE, appToken, tableId, recordId);
-        doRequest(UPDATE_RECORD_URL, headers, "", new LarkCallBack(){
+        String getDataUrl = String.format(GET_BY_RECORDID_URL_BASE, appToken, tableId, recordId);
+        doRequest(getDataUrl, headers, "", new LarkCallBack(){
             public void onFailure(@NotNull Call call, @Nullable IOException e) {
                 super.onFailure(call, e);
-                Log.d(TAG, "update Record failed: "+this.jsonData);
+                Log.d(TAG, "getDataByRecordId Record failed: "+this.jsonData);
                 infoShowListener.infoShow("获取最新数据记录失败", 2);
             }
             @Override
             public void onResponse(@NotNull Call call, @Nullable Response response) throws IOException {
                 super.onResponse(call, response);
-                Log.d(TAG, "update Record Sucessed: "+this.jsonData);
-                infoShowListener.infoShow("获取最新数据记录成功", 0);
+                Log.d(TAG, "getDataByRecordId Record Sucessed: "+this.jsonData);
+                if(baseResponseBean.code == 0){
+                    infoShowListener.infoShow("获取最新数据记录成功", 0);
+                    RecordDataResponseBean recordDataResponseBean = new Gson().fromJson(this.jsonData, RecordDataResponseBean.class);
+                    Log.d(TAG, "onResponse: "+recordDataResponseBean);
+                }else{
+                    infoShowListener.infoShow("获取最新数据记录失败 code["+baseResponseBean.code+"]msg["+baseResponseBean.msg+"]", 2);
+                }
             }
-        }, true);
+        }, METHOD_GET);
     }
 
-    public void doRequest(String url, final Map<String, String> headers, String bodyData, LarkCallBack callBack, boolean isPut) {
+    public void doRequest(String url, final Map<String, String> headers, String bodyData, LarkCallBack callBack, int methodType) {
         Log.d(TAG, "doRequest() called with: url = [" + url + "], headers = [" + headers + "], bodyData = [" + bodyData + "], callBack = [" + callBack + "]");
         RequestBody body = RequestBody.create(bodyData, JSON);
         Request.Builder builder = new Request.Builder();
@@ -231,10 +244,12 @@ public class LarkRequestManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if(isPut){
+        if(methodType == METHOD_PUT){
             builder.url(url).put(body);
-        }else{
+        }else if (methodType == METHOD_POST){
             builder.url(url).post(body);
+        }else {
+            builder.url(url).get();
         }
         final Request request = builder.build();
         Call call = client.newCall(request);
@@ -255,6 +270,7 @@ public class LarkRequestManager {
 
     public static class LarkCallBack implements Callback {
         public String jsonData = null;
+        public BaseResponseBean baseResponseBean = null;
         @Override
         public void onFailure(@NotNull Call call, @Nullable IOException e) {
             Log.i(TAG, "onFailure  IOException: " + (e == null ? " null" : e.getMessage()));
@@ -271,6 +287,7 @@ public class LarkRequestManager {
             Log.i(TAG, "\nonResponse\n header[" + response.headers() + "]\nbody["
                     + body + "]\n code[" + response.code() + "]");
             this.jsonData = body;
+            baseResponseBean = new Gson().fromJson(this.jsonData, BaseResponseBean.class);
         }
     }
 
@@ -295,6 +312,19 @@ public class LarkRequestManager {
                     ", expire=" + expire +
                     ", msg='" + msg + '\'' +
                     ", tenant_access_token='" + tenant_access_token + '\'' +
+                    '}';
+        }
+    }
+
+    public class BaseResponseBean{
+        public int code;
+        public String msg;
+
+        @Override
+        public String toString() {
+            return "BaseResponseBean{" +
+                    "code=" + code +
+                    ", msg='" + msg + '\'' +
                     '}';
         }
     }
@@ -383,6 +413,12 @@ public class LarkRequestManager {
         @SerializedName("项目")
         public String project;
 
+        @SerializedName("SW版本")
+        public String sw = "";
+
+        @SerializedName("HW版本")
+        public String hw = "";
+
         @Override
         public String toString() {
             return "RecordFields{" +
@@ -393,6 +429,8 @@ public class LarkRequestManager {
                     ", deviceId='" + deviceId + '\'' +
                     ", deviceName='" + deviceName + '\'' +
                     ", project='" + project + '\'' +
+                    ", sw='" + sw + '\'' +
+                    ", hw='" + hw + '\'' +
                     '}';
         }
     }

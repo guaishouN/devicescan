@@ -37,11 +37,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     private static final int REQUEST_CODE_QRCODE_PERMISSIONS = 1;
     private LarkRequestManager larkRequestManager;
     private String recordID, userName;
-    private long timestamp;
     private final Gson gson = new Gson();
     private SettingsBean settingsBean = null;
     private RecyclerView recyclerView;
     private TextView rawQrDataView, infoShowTx;
+    private String app_token = "";
     private final QrCodeDataAdapter adapter = new QrCodeDataAdapter();
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -57,7 +57,6 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             parseQrSettingData(settingsStr);
         }
         larkRequestManager.setAppTokenAndTableId(get(SP_APP_TOKEN, null), get(SP_TABLE_ID, null));
-        ;
         larkRequestManager.setHandler(handler);
         larkRequestManager.getTenantAccessToken(null);
         BGAQRCodeUtil.setDebug(true);
@@ -65,23 +64,31 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         rawQrDataView = findViewById(R.id.raw_data);
         infoShowTx = findViewById(R.id.app_tip);
         recyclerView.setAdapter(adapter);
-        larkRequestManager.setInfoShow(new LarkRequestManager.InfoShowListener(){
-            @Override
-            public void infoShow(String msg, int type) {
-                runOnUiThread(()->{
-                    MainActivity.this.infoShow(msg,type);
-                });
-            }
-        });
+        larkRequestManager.setInfoShow((msg, type) -> runOnUiThread(()-> MainActivity.this.infoShow(msg,type)));
+        if(TextUtils.isEmpty(app_token)){
+            infoShow("还没绑定多维表格到手机端, 请扫描配置二维码！",2);
+        }
     }
 
     @SuppressLint("DefaultLocale")
     public void onClick(View view) {
-        timestamp = System.currentTimeMillis();
+        long timestamp = System.currentTimeMillis();
         //userName = User.getText().toString();
         if (view.getId() == R.id.scan_device_qrcode) {
             startActivityForResult(new Intent(this, DeviceScanActivity.class), 100);
+            return;
         }
+        if(TextUtils.isEmpty(app_token)){
+            infoShow("还没绑定多维表格到手机端, 请扫描配置二维码！",2);
+            return;
+        }
+
+        if(view.getId() == R.id.get_newest_record){
+            infoShow("正在获取对应多维表最新记录....",1);
+            larkRequestManager.getDataByRecordId(recordID);
+            return;
+        }
+
         String data = "";
         if (view.getId() == R.id.device_un) {
             data = String.format(LarkRequestManager.PREPARE_DEV, userName, timestamp);
@@ -166,9 +173,9 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
     public void infoShow(String msg, int type){
         infoShowTx.setText(msg);
-        int cl = R.color.infoColorNormal;
+        int cl = R.drawable.info_bg_ok;
         if(type>0){
-            cl = type==1?R.color.infoColorWarn:R.color.infoColorDanger;
+            cl = type==1?R.drawable.info_bg_warn :R.drawable.info_bg_error;
         }
         infoShowTx.setBackgroundResource(cl);
     }
@@ -237,10 +244,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
             Log.d(TAG, "parseUrl: " + aURL.getPath());
             String[] splits = aURL.getPath().substring(1).split("/");
-            String app_token = splits[1];
+            app_token = splits[1];
             String table_id = map.get("table");
             Log.d(TAG, "parseUrl app_token: " + app_token);
             Log.d(TAG, "parseUrl table_id: " + table_id);
+            larkRequestManager.setAppTokenAndTableId(app_token, table_id);
             save(SP_APP_TOKEN, app_token);
             save(SP_TABLE_ID, table_id);
             infoShow("已更新扫码配置", 0);

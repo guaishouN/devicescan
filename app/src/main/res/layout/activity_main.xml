@@ -12,11 +12,12 @@
             android:id="@+id/app_tip"
             android:gravity="center"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
+            android:minHeight="30dp"
             android:layout_margin="10dp"
             android:padding="8dp"
-            android:background="@drawable/info_bg"
-            android:textSize="16sp"
+            android:background="@drawable/info_bg_warn"
+            android:textSize="18sp"
             android:layout_marginBottom="20dp"
             android:text="链接多维表成功"/>
         <LinearLayout
@@ -36,6 +37,7 @@
                 android:onClick="onClick"
                 android:text="点击扫描二维码"/>
             <Button
+                android:id="@+id/get_newest_record"
                 android:background="@drawable/bt_bg"
                 android:textSize="20sp"
                 android:textColor="@android:color/white"
@@ -43,6 +45,7 @@
                 android:layout_marginStart="5dp"
                 android:layout_weight="0.5"
                 android:layout_height="50dp"
+                android:onClick="onClick"
                 android:text="获取最新记录"/>
         </LinearLayout>
 

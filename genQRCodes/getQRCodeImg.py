@@ -78,7 +78,7 @@ def check_config_file():
     # 在config文件中加入注释"单位为cm"
     desc = "#以下为默认配置。单位为cm, A4纸打印，大小为21cm*29.7cm。可选常用颜色: white black green red blue yellow"
     configure["配置说明"] = {"说明": desc}
-    configure["打印纸张"] = {'边距_上下左右': (1.56, 1.3, 0.78, 0.78)}
+    configure["打印纸张"] = {'边距_上下左右': (1.54, 1.54, 0.78, 0.78)}
     configure["标签"] = {'标签行列': (7, 3)}
     configure["文本显示"] = {
         '字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人'),

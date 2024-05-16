@@ -32,6 +32,7 @@ class TextConf:
     items: tuple | None = None
     font_size = 30
     left = True
+    show_label_title = True
 
 
 @dataclass
@@ -83,7 +84,8 @@ def check_config_file():
     configure["文本显示"] = {
         '字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人'),
         '字体大小': 30,
-        '位置_左右': '左'
+        '位置_左右': '左',
+        '显示标签Key': '是',
     }
     configure["颜色"] = {'二维码颜色': 'black', '文本颜色': 'black'}
     configure["二维码内容字段"] = {'字段': ('设备ID', '设备名称', '项目', '录入日期', '使用人')}
@@ -146,6 +148,9 @@ def check_config_file():
     text_conf.items = ast.literal_eval(content_colum)
     font_size_str = configure.get('文本显示', '字体大小', fallback=None)
     text_conf.font_size = int(font_size_str)
+    show_label_title_str = configure.get('文本显示', '显示标签Key', fallback=None)
+    text_conf.show_label_title = "是" == show_label_title_str
+
     logging.debug(f'feishu-config.ini text_conf:{str(text_conf)} {text_conf.font_size}')
 
     # 纸张配置
@@ -352,8 +357,11 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     qr_info = str()
     for key in _qr_data:
-        qr_info = "".join([qr_info, key, ": ", _qr_data[key], '\n'])
-    # logging.info(f'join _qr_data result {qr_info}')
+        if text_conf.show_label_title:
+            qr_info = "".join([qr_info, key, ": ", _qr_data[key] or "", '\n'])
+        else:
+            qr_info = "".join([qr_info, _qr_data[key] or "", '\n'])
+    logging.info(f'join _qr_data result {qr_info}')
     qr.add_data(qr_info)
     qr.make(fit=True)
     img = qr.make_image(fill_color=cl_qrcode, back_color=bg_qrcode)
@@ -363,7 +371,10 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     # TEXT
     text_info = str()
     for key in _text_data:
-        text_info = "".join([text_info, key, ": ", _text_data[key], '\n'])
+        if text_conf.show_label_title:
+            text_info = "".join([text_info, key, ": ", _text_data[key] or "", '\n'])
+        elif _text_data[key]:
+            text_info = text_info + _text_data[key]+'\n'
     text_lines = text_info.split('\n')
     font_size = text_conf.font_size
     font = ImageFont.truetype("msyhl.ttc", font_size)
@@ -435,7 +446,11 @@ def do_main():
     if code1 == 0:
         code2, msg2, items = list_records(tenant_access_token_p=tenant_access_token, app_token_p=app_token_cf,
                                           table_id_p=table_id_cf)
-        logging.info(f'获取到标签记录数量:{len(items)}')
+        if items:
+            logging.info(f'获取到标签记录数量:{len(items)}')
+        else:
+            logging.info(f'没有获取要打印的多维表记录！是不是还没勾选?')
+            return
         i = 0
         if code2 == 0:
             for text_data, qr_data in simplify_records(items):

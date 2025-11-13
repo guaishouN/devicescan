@@ -10,8 +10,9 @@ from docx.shared import Cm, Pt, Inches
 import logging
 import os
 import ast
+import os, shutil
 
-default_table_url = "https://yesv-desaysv.feishu.cn/base/CmHmb4MxPaEW7zsWB07c1hCUnhd?table=tbl3OBzMMqjX79gN&view=vewsIt61jC#CategoryScheduledTask"
+default_table_url = "https://yesv-desaysv.feishu.cn/base/WUJSbufSja2MsCs3kOvcHH23nfb?table=tblx8lyoi7iNJzRm&view=vew9M96Gnr"
 app_id = 'cli_a514aea9fa79900b'
 app_secret = 'IsUeIxmzO5NtJiQA6B3MdfkHqIcmQqws'
 app_token = 'CmHmb4MxPaEW7zsWB07c1hCUnhd'
@@ -23,7 +24,8 @@ cl_qrcode = 'black'
 cl_text = 'black'
 
 """log 以追加的形式打印到文件夹./qrcodes下"""
-logging.basicConfig(level=logging.DEBUG, filename='./run.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.DEBUG, filename='./run.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 @dataclass
@@ -114,7 +116,7 @@ def check_config_file():
         logging.info(f'feishu-config.ini default url:{loc_url}')
 
     # 如果url符合格式则从url中解析出app_token table_id
-    if loc_url.startswith('https://yesv-desaysv.feishu.cn/base/'):
+    if loc_url.startswith('https://yesv-desaysv.feishu.cn/wiki/') or loc_url.startswith('https://yesv-desaysv.feishu.cn/base/'):
         url_get1 = loc_url.split('?')[0]
         params1 = loc_url.split('?')[1]
         app_token_tmp = url_get1.split('/')[-1]
@@ -295,6 +297,7 @@ def get_tenant_access_token(app_id=None, app_secret=None, config_file=None):
 def list_records(tenant_access_token_p=None, app_token_p=None, table_id_p=None, page_token=None, page_size=None,
                  config_file=None):
     url_record = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token_p}/tables/{table_id_p}/records?filter=CurrentValue.%5B%E5%8B%BE%E9%80%89%E6%89%93%E5%8D%B0%E6%A0%87%E7%AD%BE%5D%3D1"
+    logging.info(url_record)
     headers = {
         'Authorization': 'Bearer ' + tenant_access_token_p,
         'Content-Type': 'application/json; charset=utf-8',
@@ -364,8 +367,9 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
     logging.info(f'join _qr_data result {qr_info}')
     qr.add_data(qr_info)
     qr.make(fit=True)
-    img = qr.make_image(fill_color=cl_qrcode, back_color=bg_qrcode)
-    img = img.resize((page_conf.min_direction_pixels, page_conf.min_direction_pixels))
+    # img = qr.make_image(fill_color=cl_qrcode, back_color=bg_qrcode)
+    img = Image.open("./tableqr.png")
+    # img = img.resize((page_conf.min_direction_pixels, page_conf.min_direction_pixels))
     # img.save(f"./qrcodes/PPPPPPP.png")
 
     # TEXT
@@ -396,7 +400,7 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
         new_image.paste(img, (page_conf.label_size_pixels[0] - page_conf.min_direction_pixels, 0))
     else:
         # Draw text
-        text_position = (page_conf.min_direction_pixels + 10, 25)
+        text_position = (page_conf.min_direction_pixels - 50, 25-10)
         for line in text_lines:
             if "Uid" in line:
                 continue
@@ -448,6 +452,7 @@ def do_main():
                                           table_id_p=table_id_cf)
         if items:
             logging.info(f'获取到标签记录数量:{len(items)}')
+            logging.info(f'获取到标签记录数量:{items}')
         else:
             logging.info(f'没有获取要打印的多维表记录！是不是还没勾选?')
             return
@@ -464,4 +469,5 @@ def do_main():
     else:
         logging.info(f'被拒绝访问多维表格，请确认【多维表格权限配置是否正确】和【是否在允许的网络域内】!!, code:{code1}')
 
-# do_main()
+if __name__ == '__main__':
+    do_main()

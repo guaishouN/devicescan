@@ -400,12 +400,19 @@ def gen_qrcode_by_qr_data(_text_data, _qr_data):
         new_image.paste(img, (page_conf.label_size_pixels[0] - page_conf.min_direction_pixels, 0))
     else:
         # Draw text
-        text_position = (page_conf.min_direction_pixels - 50, 25-10)
+        text_position = (page_conf.min_direction_pixels -200, 25-20)
         for line in text_lines:
             if "Uid" in line:
                 continue
-            draw.text(text_position, line, font=font, fill=cl_text)
-            text_position = (text_position[0], text_position[1] + font_size + 10)
+            # 如果文本太长则截断
+            if len(line) > 20:
+                draw.text(text_position, line[:20], font=font, fill=cl_text)
+                text_position = (text_position[0], text_position[1] + font_size + 10)
+                draw.text((text_position[0]+140, text_position[1]), line[20:], font=font, fill=cl_text)
+                text_position = (text_position[0], text_position[1] + font_size + 10)
+            else:
+                draw.text(text_position, line, font=font, fill=cl_text)
+                text_position = (text_position[0], text_position[1] + font_size + 10)
 
         # Draw Qrcode
         new_image.paste(img, (0, 0))
